@@ -1,24 +1,39 @@
 import { Container, Row, Col, Button } from 'reactstrap';
+import logo from '../assets/logo.png';
+import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
   return (
-    <div className="bg-light min-vh-100 d-flex flex-column justify-content-center">
-      <Container className="text-center">
-        <Row>
-          <Col md={{ size: 8, offset: 2 }}>
-            <h1 className="display-3 text-primary fw-bold mb-4">Match Up</h1>
-            <p className="lead mb-5">
-              A melhor rede social para organizar jogos com os teus amigos. 
-              Futebol, Basket e muito mais. Cria equipas, gere inscrições e domina o campo!
+    <div className="landing-bg min-vh-100 d-flex flex-column justify-content-center align-items-center">
+      <Container>
+        <Row className="justify-content-center">
+          <Col md={10} lg={8} className="text-center bg-white p-5 rounded shadow-lg">
+            
+            <img 
+              src={logo} 
+              alt="Match Up Logo" 
+              className="img-fluid mb-4" 
+              style={{ maxWidth: '350px' }} 
+            />
+
+            <h2 className="fw-bold mb-4 text-dark">
+              A plataforma para marcares os teus jogos.
+            </h2>
+            
+            <p className="lead mb-5 text-secondary">
+                Junta os teus amigos, desafia outras <strong> equipas </strong> 
+                e marca os teus jogos de forma fácil e rápida! Vais ficar de fora ?
             </p>
-            <div>
-              <Button color="primary" size="lg" className="me-3">
+            
+            <div className="d-flex justify-content-center gap-3">
+              <Button tag={Link} to="/register" className="btn-custom-red px-4 py-2 fs-5 fw-bold shadow-sm">
                 Criar Conta
               </Button>
-              <Button color="outline-primary" size="lg">
+              <Button tag={Link} to="/login" color="dark" outline className="px-4 py-2 fs-5 fw-bold shadow-sm">
                 Iniciar Sessão
               </Button>
             </div>
+
           </Col>
         </Row>
       </Container>
