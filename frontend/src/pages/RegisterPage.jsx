@@ -7,7 +7,7 @@ const RegisterPage = () => {
     const navigate = useNavigate();
     
     const sportOptions = {
-        'Futebol/Futsal': ['Universal', 'Guarda-redes', 'Defesa', 'Central', 'Extremo', 'Lateral', 'Médio', 'Avançado', 'Fixo', 'Ala', 'Pivô', 'Banco'],
+        'Futebol': ['Universal', 'Guarda-redes', 'Defesa', 'Central', 'Extremo', 'Lateral', 'Médio', 'Avançado', 'Fixo', 'Ala', 'Pivô', 'Banco'],
         'Basketball': ['Base (PG)', 'Extremo-Base (SG)', 'Extremo (SF)', 'Extremo-Poste (PF)', 'Poste (C)', 'Banco'],
     };
 
