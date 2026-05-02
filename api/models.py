@@ -56,7 +56,6 @@ class FollowRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # Garante que não podes enviar 50 pedidos à mesma pessoa enquanto o primeiro estiver pendente
         unique_together = ('from_user', 'to_user')
 
     def __str__(self):
@@ -71,41 +70,51 @@ class Team(models.Model):
         return self.name
 
 class Game(models.Model):
-    DISTRIBUTION_CHOICES = [
-        ('1', 'Escolha Livre (Equipa 1 ou 2)'),
-        ('2', 'Auto-Balanceamento por Estatísticas'),
-        ('3', 'Inscrição de Equipa Inteira'),
-    ]
-
-    sport = models.CharField(max_length=50)
-    location = models.CharField(max_length=200)
-    date = models.DateTimeField()
-    organizer = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='organized_games')
+    organizer = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='organized_games', null=True)
     
-    max_players_per_team = models.IntegerField(default=7)
-    max_subs_per_team = models.IntegerField(default=2)
+    modality = models.CharField(max_length=50, default='Futebol')
+    location = models.CharField(max_length=150)
+    date = models.DateField()
+    time = models.TimeField()
+    price = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     
-    distribution_option = models.CharField(max_length=1, choices=DISTRIBUTION_CHOICES)
-    is_registration_open = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.sport} em {self.location} - {self.date.strftime('%d/%m/%Y')}"
-
-class Registration(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING', 'Pendente (Aguardar admin)'),
-        ('ACCEPTED', 'Aceite (Aguardar pagamento)'),
-        ('PAID', 'Pago (Inscrição Válida)'),
-        ('INVALID', 'Inválida (Expirou tempo de pagamento)'),
-    ]
-
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='registrations')
-    player = models.ForeignKey(Player, on_delete=models.CASCADE, null=True, blank=True)
-    team = models.ForeignKey(Team, on_delete=models.CASCADE, null=True, blank=True)
+    titulares = models.IntegerField(default=5)
+    suplentes = models.IntegerField(default=0)
+    cor_equipa1 = models.CharField(max_length=7, default='#ff0000') 
+    cor_equipa2 = models.CharField(max_length=7, default='#0000ff') 
     
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
-    selected_side = models.IntegerField(null=True, blank=True)
+    distribution_model = models.CharField(max_length=50, default='Escolha Livre')
+
+    occupiedPositions = models.JSONField(default=list, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Inscrição: {self.game.sport} - Status: {self.status}"
+        return f"{self.modality} - {self.location} ({self.date})"
+
+class Registration(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pendente'),
+        ('APPROVED', 'Aceite'),
+        ('REJECTED', 'Rejeitada'),
+    ]
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='registrations')
+    
+    # Quem está a fazer o pedido (Jogador)
+    player = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='my_registrations')
+    
+    # Se for uma inscrição "Equipa vs Equipa", guardamos qual é a equipa
+    team = models.ForeignKey('Team', on_delete=models.CASCADE, null=True, blank=True, related_name='team_registrations')
+    
+    # Qual a vaga que quer ocupar
+    position_id = models.CharField(max_length=50)
+    
+    # O estado do pedido (Pendente por defeito)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        nome = self.team.name if self.team else self.player.user.username 
+        return f"{nome} -> {self.game.location} ({self.status})"

@@ -77,7 +77,6 @@ def login_view(request):
         player = Player.objects.get(username=username)
         
         # Verifica se a password coincide
-        # (Futuramente, vamos aprender a encriptar as passwords, mas para já fazemos correspondência exata)
         if player.password == password:
             return Response({
                 "message": "Login efetuado com sucesso!",
@@ -91,3 +90,51 @@ def login_view(request):
     except Player.DoesNotExist:
         # Não encontrou nenhum jogador com este username
         return Response({"error": "Utilizador não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+    
+
+# Endpoint de Detalhe para UM Jogo Específico (Ler, Atualizar, Apagar)
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def game_detail(request, pk):
+    try:
+        game = Game.objects.get(pk=pk)
+    except Game.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = GameSerializer(game)
+        return Response(serializer.data)
+
+    elif request.method in ['PUT', 'PATCH']:
+        serializer = GameSerializer(game, data=request.data, partial=(request.method == 'PATCH'))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        game.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Endpoint de Detalhe para UMA Inscrição Específica (Aceitar/Rejeitar)
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def registration_detail(request, pk):
+    try:
+        registration = Registration.objects.get(pk=pk)
+    except Registration.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = RegistrationSerializer(registration)
+        return Response(serializer.data)
+
+    elif request.method in ['PUT', 'PATCH']:
+        serializer = RegistrationSerializer(registration, data=request.data, partial=(request.method == 'PATCH'))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        registration.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
