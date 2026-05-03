@@ -63,8 +63,14 @@ class FollowRequest(models.Model):
     
 class Team(models.Model):
     name = models.CharField(max_length=100)
+    modality = models.CharField(max_length=50, default='Futebol')
+    city = models.CharField(max_length=100, blank=True, null=True)
+    logo = models.ImageField(upload_to='team_logos/', null=True, blank=True)
+    
     captain = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='captain_of')
-    members = models.ManyToManyField(Player, related_name='teams')
+    coach = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True, blank=True, related_name='coach_of')
+    
+    members = models.ManyToManyField(Player, related_name='teams', blank=True)
 
     def __str__(self):
         return self.name

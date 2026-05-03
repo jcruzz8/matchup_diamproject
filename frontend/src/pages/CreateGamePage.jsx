@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button, Alert } from 'reactstrap';
+import TopNavBarSimple from '../components/TopNavBarSimple';
+import BottomNavBar from '../components/BottomNavBar';
 
 const CreateGamePage = () => {
     const navigate = useNavigate();
@@ -42,7 +44,7 @@ const CreateGamePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/games/', formData); // axio comunica com o backend para criar o jogo
+            const response = await axios.post('http://127.0.0.1:8000/api/games/', formData);
             setAlertConfig({ show: true, message: 'Jogo criado com sucesso! A preparar o campo...', color: 'success' });
             setTimeout(() => navigate('/'), 2000);
         } catch (error) {
@@ -53,20 +55,19 @@ const CreateGamePage = () => {
     };
 
     return (
-        <div className="bg-light min-vh-100 py-5">
+        <div className="bg-light min-vh-100 pb-5">
+
+            <TopNavBarSimple/>
+
             {alertConfig.show && (
                 <Alert color={alertConfig.color} className="position-fixed top-0 start-50 translate-middle-x mt-4 shadow-lg fw-bold" style={{ zIndex: 1050, minWidth: '300px', textAlign: 'center' }}>
                     {alertConfig.message}
                 </Alert>
             )}
 
-            <Container>
+            <Container className="pt-4 pb-5 mb-4">
                 <Row className="justify-content-center">
                     <Col md={8} lg={6}>
-                        <div className="d-flex justify-content-end mb-3">
-                            <Button color="link" className="text-dark text-decoration-none fs-4" onClick={() => navigate(-1)}>✕</Button>
-                        </div>
-
                         <Card className="shadow-sm border-0 rounded-4 mb-5">
                             <CardBody className="p-4 p-md-5">
                                 <h3 className="fw-bold text-center mb-4 text-dark">Agendar Novo Match</h3>
@@ -113,7 +114,6 @@ const CreateGamePage = () => {
                                             <FormGroup className="mb-3">
                                                 <Label className="fw-bold small">Titulares (por equipa)</Label>
                                                 <Input type="select" name="titulares" value={formData.titulares} onChange={handleChange} required>
-                                                    {/* LÓGICA DINÂMICA: Mostra opções dependendo da Modalidade */}
                                                     {formData.modality === 'Futebol' ? (
                                                         <>
                                                             <option value="5">Fut 5 (5v5)</option>
@@ -173,6 +173,8 @@ const CreateGamePage = () => {
                     </Col>
                 </Row>
             </Container>
+
+            <BottomNavBar />
         </div>
     );
 };

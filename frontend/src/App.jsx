@@ -6,6 +6,8 @@ import HomePage from './pages/HomePage';
 import CreateMenuPage from './pages/CreateMenuPage';
 import CreateGamePage from './pages/CreateGamePage';
 import OrganizerDashboard from './pages/OrganizerDashboard';
+import MatchStatusPage from './pages/MatchStatusPage';
+import CreateTeamPage from './pages/CreateTeamPage';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
         <Route path="/organizar" element={<OrganizerDashboard />} />
         <Route path="/criar" element={<CreateMenuPage />} /> 
         <Route path="/criar/jogo" element={<CreateGamePage />} />
+        <Route path="/criar/equipa" element={<CreateTeamPage />} />
+        <Route path="/estado-match" element={<MatchStatusPage />} />
       </Routes>
     </BrowserRouter>
   );
