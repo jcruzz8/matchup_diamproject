@@ -5,6 +5,7 @@ app_name = 'api'
 
 urlpatterns = [
     path('players/', views.players),
+    path('players/<int:pk>/', views.player_detail),
     path('teams/', views.teams),
     path('games/', views.games),
     path('games/<int:pk>/', views.game_detail),
