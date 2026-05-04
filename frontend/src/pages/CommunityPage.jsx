@@ -162,23 +162,38 @@ const CommunityPage = () => {
                                 <h5 className="fw-bold m-0">As Minhas Equipas</h5>
                                 <Button size="sm" color="danger" outline className="fw-bold rounded-pill" onClick={() => navigate('/criar/equipa')}>+ Criar</Button>
                             </div>
-                            
+
                             {myTeams.length > 0 ? (
                                 <Row className="flex-nowrap overflow-auto pb-2 gx-3" style={{ scrollbarWidth: 'none' }}>
-                                    {myTeams.map(team => (
-                                        <Col xs={8} md={5} key={team.id}>
-                                            <div className="border border-secondary border-opacity-25 rounded-4 p-3 bg-white shadow-sm text-center h-100">
-                                                <div className="rounded-circle overflow-hidden bg-light mx-auto mb-2 border" style={{ width: '60px', height: '60px' }}>
-                                                    {getPic(team) ? <img src={getPic(team)} alt={team.name} className="w-100 h-100 object-fit-cover"/> : <span className="d-flex align-items-center justify-content-center h-100 fw-bold text-muted">EQ</span>}
+                                    {myTeams.map(team => {
+                                        let roles = [];
+                                        if (team.coach == userId) roles.push("Treinador");
+                                        if (team.captain == userId) roles.push("Capitão");
+
+                                        if (roles.length === 0) roles.push("Jogador");
+
+                                        const roleText = roles.join(" & ");
+                                        const badgeColor = roles.includes("Treinador") ? "danger" : (roles.includes("Capitão") ? "danger" : "secondary");
+
+                                        return (
+                                            <Col xs={8} md={5} key={team.id}>
+                                                <div className="border border-secondary border-opacity-25 rounded-4 p-3 bg-white shadow-sm text-center h-100 pb-4 position-relative">
+                                                    <div className="rounded-circle overflow-hidden bg-light mx-auto mb-2 border" style={{ width: '60px', height: '60px' }}>
+                                                        {getPic(team) ? <img src={getPic(team)} alt={team.name} className="w-100 h-100 object-fit-cover" /> : <span className="d-flex align-items-center justify-content-center h-100 fw-bold text-muted">EQ</span>}
+                                                    </div>
+                                                    <h6 className="fw-bold mb-1 text-truncate">{team.name}</h6>
+                                                    <small className="text-muted d-block mb-3">{team.modality}</small>
+
+                                                    {/* Mini tag de Cargo alinhada ao fundo do cartão */}
+                                                    <div className="position-absolute bottom-0 start-50 translate-middle-x w-100 mb-2">
+                                                        <Badge color={badgeColor} className="rounded-pill shadow-sm px-2 text-truncate" style={{ fontSize: '10px', letterSpacing: '0.5px', maxWidth: '90%' }}>
+                                                            {roleText}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
-                                                <h6 className="fw-bold mb-1 text-truncate">{team.name}</h6>
-                                                <small className="text-muted d-block mb-2">{team.modality}</small>
-                                                <Badge color={team.captain == userId ? "danger" : "secondary"}>
-                                                    {team.captain == userId ? "Capitão" : "Membro"}
-                                                </Badge>
-                                            </div>
-                                        </Col>
-                                    ))}
+                                            </Col>
+                                        );
+                                    })}
                                 </Row>
                             ) : (
                                 <div className="text-center p-4 bg-white border rounded-4 shadow-sm">

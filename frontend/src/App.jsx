@@ -10,6 +10,8 @@ import MatchStatusPage from './pages/MatchStatusPage';
 import CreateTeamPage from './pages/CreateTeamPage';
 import CommunityPage from './pages/CommunityPage';
 import SearchPage from './pages/SearchPage';
+import ProfilePage from './pages/ProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
         <Route path="/estado-match" element={<MatchStatusPage />} />
         <Route path="/comunidade" element={<CommunityPage />} />
         <Route path="/pesquisar" element={<SearchPage />} />
+        <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/editar-perfil" element={<EditProfilePage />} />
       </Routes>
     </BrowserRouter>
   );

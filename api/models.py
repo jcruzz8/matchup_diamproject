@@ -12,7 +12,7 @@ class Player(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128, default="") 
     phone = models.CharField(max_length=20, default="")
-    age = models.IntegerField(default=18)
+    birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=50, choices=GENDER_CHOICES, default="")
     
     # Campos Opcionais
@@ -22,7 +22,7 @@ class Player(models.Model):
     
     # Guardar as Modalidades e Posições (Estrutura JSON)
     sport_positions = models.JSONField(default=dict, blank=True)
-
+    modality_stats = models.JSONField(default=dict, blank=True)
     is_public = models.BooleanField(default=True) # Perfil público ou privado
     
     followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
@@ -142,3 +142,12 @@ class Registration(models.Model):
     def __str__(self):
         nome = self.team.name if self.team else self.player.user.username 
         return f"{nome} -> {self.game.location} ({self.status})"
+    
+class Highlight(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='highlights')
+    image = models.ImageField(upload_to='highlights/')
+    caption = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Foto de {self.player.username}"

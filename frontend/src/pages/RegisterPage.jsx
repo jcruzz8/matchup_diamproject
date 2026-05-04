@@ -19,7 +19,7 @@ const RegisterPage = () => {
         email: '',
         phone: '',
         password: '',
-        age: '',
+        birth_date: '',
         gender: '',
         height: '',
         zone: '',
@@ -95,7 +95,7 @@ const RegisterPage = () => {
         submitData.append('email', formData.email);
         submitData.append('password', formData.password);
         submitData.append('phone', formData.phone);
-        submitData.append('age', formData.age);
+        submitData.append('birth_date', formData.birth_date);
         submitData.append('gender', formData.gender);
         submitData.append('is_public', formData.is_public ? 'True' : 'False');
 
