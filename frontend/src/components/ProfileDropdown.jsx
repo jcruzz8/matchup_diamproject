@@ -110,8 +110,8 @@ const ProfileDropdown = () => {
                         </div>
 
                         <div className="border-bottom my-2" />
-                        <button type="button" className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Ver Perfil</button>
-                        <button type="button" className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Editar Perfil</button>
+                        <button type="button" onMouseDown={() => navigate('/perfil')} className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Ver Perfil</button>
+                        <button type="button" onMouseDown={() => navigate('/editar-perfil')} className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Editar Perfil</button>
                         <button type="button" onMouseDown={() => navigate('/organizar')} className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Gerir Match's</button>
                         <button type="button" onMouseDown={() => navigate('/estado-match')} className="btn btn-link text-start w-100 py-2 text-decoration-none text-dark fw-semibold">Consultar Match's</button>
                         <div className="border-bottom my-2" />
