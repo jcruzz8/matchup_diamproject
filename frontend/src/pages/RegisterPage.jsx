@@ -138,6 +138,14 @@ const RegisterPage = () => {
         }
     };
 
+    // Calcula idade
+    const calculateAge = (dob) => {
+        if (!dob) return '';
+        const diffMs = Date.now() - new Date(dob).getTime();
+        const ageDt = new Date(diffMs); 
+        return Math.abs(ageDt.getUTCFullYear() - 1970);
+    };
+
     return (
         <div className="landing-bg min-vh-100 py-5">
 
@@ -258,10 +266,12 @@ const RegisterPage = () => {
                                     </Row>
 
                                     <Row>
-                                        <Col md={4}>
-                                            <FormGroup>
-                                                <Label for="age" className="fw-bold">Idade *</Label>
-                                                <Input id="age" name="age" type="number" min="10" required onChange={handleChange} />
+                                        <Col xs={4}>
+                                            <FormGroup className="mb-3">
+                                                <Label className="fw-bold small text-muted text-uppercase">
+                                                    Data Nasc. {formData.birth_date && <span className="text-danger text-lowercase ms-1">({calculateAge(formData.birth_date)} anos)</span>}
+                                                </Label>
+                                                <Input type="date" name="birth_date" className="border-2 bg-light shadow-none fw-bold text-muted" value={formData.birth_date} onChange={handleChange} />
                                             </FormGroup>
                                         </Col>
                                         <Col md={4}>
