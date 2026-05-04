@@ -75,6 +75,24 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
+class TeamJoinRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pendente'),
+        ('ACCEPTED', 'Aceite'),
+        ('REJECTED', 'Rejeitado'),
+    ]
+
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='team_requests')
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='join_requests')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('player', 'team') # Evita spam de pedidos para a mesma equipa
+
+    def __str__(self):
+        return f"{self.player.username} quer aderir à {self.team.name} ({self.status})"
+
 class Game(models.Model):
     organizer = models.ForeignKey('Player', on_delete=models.CASCADE, related_name='organized_games', null=True)
     

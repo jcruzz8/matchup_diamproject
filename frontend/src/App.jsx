@@ -8,6 +8,8 @@ import CreateGamePage from './pages/CreateGamePage';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import MatchStatusPage from './pages/MatchStatusPage';
 import CreateTeamPage from './pages/CreateTeamPage';
+import CommunityPage from './pages/CommunityPage';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
         <Route path="/criar/jogo" element={<CreateGamePage />} />
         <Route path="/criar/equipa" element={<CreateTeamPage />} />
         <Route path="/estado-match" element={<MatchStatusPage />} />
+        <Route path="/comunidade" element={<CommunityPage />} />
+        <Route path="/pesquisar" element={<SearchPage />} />
       </Routes>
     </BrowserRouter>
   );
