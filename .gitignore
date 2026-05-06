@@ -1,0 +1,43 @@
+# =========================
+# 1. AMBIENTES VIRTUAIS E PYTHON
+# =========================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# 2. NODE.JS E FRONTEND (REACT/VITE)
+# =========================
+node_modules/
+dist/
+build/
+.npm/
+
+# =========================
+# 3. AMBIENTES DE DESENVOLVIMENTO (IDEs)
+# =========================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# =========================
+# 4. SISTEMA OPERATIVO (Windows / Mac)
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# 5. VARIÁVEIS DE AMBIENTE (Segurança)
+# =========================
+.env
+.env.local
+.env.*.local
+
+# =========================
+# 6. BASE DE DADOS LOCAL (Opcional)
+# =========================
+# db.sqlite3
