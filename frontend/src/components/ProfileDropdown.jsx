@@ -48,11 +48,18 @@ const ProfileDropdown = () => {
         fetchUserData();
     }, []);
 
-    const handleLogout = () => {
-        console.log("Logout iniciado");
-        localStorage.removeItem('matchup_user_id');
-        localStorage.removeItem('matchup_username');
-        navigate('/landing');
+    const handleLogout = async () => {
+        try {
+            // Pede ao Django para apagar a sessão no servidor
+            await axios.post('http://127.0.0.1:8000/api/logout/');
+        } catch (error) {
+            console.error("Erro ao fechar sessão no backend:", error);
+        } finally {
+            // Limpa os dados no browser do utilizador (faz sempre, mesmo que o backend falhe)
+            localStorage.removeItem('matchup_user_id');
+            localStorage.removeItem('matchup_username');
+            window.location.href = '/landing';
+        }
     };
 
     return (

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Player(models.Model):
     GENDER_CHOICES = [
@@ -6,11 +7,9 @@ class Player(models.Model):
         ('Feminino', 'Feminino'),
     ]
 
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
     # Campos Obrigatórios
-    username = models.CharField(max_length=50, unique=True)
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128, default="") 
     phone = models.CharField(max_length=20, default="")
     birth_date = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=50, choices=GENDER_CHOICES, default="")
@@ -36,7 +35,7 @@ class Player(models.Model):
     assists = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.username
+        return self.user.username
 
     # Lógica inteligente para encontrar os "Colegas" (pessoas que se seguem mutuamente)
     @property
