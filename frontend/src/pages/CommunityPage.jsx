@@ -4,10 +4,17 @@ import axios from 'axios';
 import { Container, Input, Button, ListGroup, ListGroupItem, Badge, Row, Col } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const CommunityPage = () => {
     const navigate = useNavigate();
-    const userId = localStorage.getItem('matchup_user_id');
+
+    // 2. Extrai o utilizador do contexto (adeus localStorage!)
+    const { user } = useUserContext();
+
+    // 3. Garantir que o ID é um Número desde o início para facilitar as comparações
+    const userId = Number(user?.player_id);
+
     const [currentUser, setCurrentUser] = useState(null);
 
     // Estado dos Separadores
@@ -23,35 +30,37 @@ const CommunityPage = () => {
     const [searchedPlayers, setSearchedPlayers] = useState([]);
     const [searchPlayerQuery, setSearchPlayerQuery] = useState('');
 
+    // 4. Simplificação do useEffect: as rotas protegidas já evitam os anónimos,
+    // logo só precisamos de garantir que temos um ID antes de carregar dados.
     useEffect(() => {
-        if (!userId) {
-            navigate('/login');
-            return;
+        if (userId) {
+            fetchInitialData();
         }
-        fetchInitialData();
-    }, [userId, navigate]);
+    }, [userId]);
 
     const fetchInitialData = async () => {
         try {
-            const resPlayer = await axios.get(`http://127.0.0.1:8000/api/players/${userId}/`);
+            const resPlayer = await axios.get(`http://localhost:8000/api/players/${userId}/`);
             setCurrentUser(resPlayer.data);
             const userZone = resPlayer.data.zone || resPlayer.data.city || '';
 
-            const resTeams = await axios.get(`http://127.0.0.1:8000/api/teams/`);
+            const resTeams = await axios.get(`http://localhost:8000/api/teams/`);
             const allTeams = resTeams.data;
 
-            const minhas = allTeams.filter(t => t.captain == userId || (t.members && t.members.includes(parseInt(userId))));
+            // 5. Como userId agora é um Number de forma garantida,
+            // podemos usar '===' e remover os 'parseInt()' espalhados pelo código!
+            const minhas = allTeams.filter(t => t.captain === userId || (t.members && t.members.includes(userId)));
             setMyTeams(minhas);
 
             if (userZone) {
-                const sugeridas = allTeams.filter(t => 
-                    t.city?.toLowerCase() === userZone.toLowerCase() && 
-                    t.captain != userId && 
-                    (!t.members || !t.members.includes(parseInt(userId)))
+                const sugeridas = allTeams.filter(t =>
+                    t.city?.toLowerCase() === userZone.toLowerCase() &&
+                    t.captain !== userId &&
+                    (!t.members || !t.members.includes(userId))
                 );
                 setSuggestedTeams(sugeridas.slice(0, 4));
             } else {
-                const sugeridas = allTeams.filter(t => t.captain != userId && (!t.members || !t.members.includes(parseInt(userId))));
+                const sugeridas = allTeams.filter(t => t.captain !== userId && (!t.members || !t.members.includes(userId)));
                 setSuggestedTeams(sugeridas.slice(0, 4));
             }
 
@@ -88,7 +97,7 @@ const CommunityPage = () => {
 
     const handleSearchTeams = async () => {
         try {
-            const resTeams = await axios.get(`http://127.0.0.1:8000/api/teams/`);
+            const resTeams = await axios.get(`http://localhost:8000/api/teams/`);
             const results = resTeams.data.filter(t => 
                 t.name.toLowerCase().includes(searchTeamQuery.toLowerCase())
             );
@@ -100,7 +109,7 @@ const CommunityPage = () => {
 
     const handleSearchPlayers = async () => {
         try {
-            const resPlayers = await axios.get(`http://127.0.0.1:8000/api/players/`);
+            const resPlayers = await axios.get(`http://localhost:8000/api/players/`);
             const results = resPlayers.data.filter(p => 
                 p.username.toLowerCase().includes(searchPlayerQuery.toLowerCase())
             );
@@ -128,7 +137,7 @@ const CommunityPage = () => {
 
     const getPic = (obj) => {
         let picUrl = obj.photo || obj.logo || obj.profile_picture;
-        if (picUrl && picUrl.startsWith('/')) return `http://127.0.0.1:8000${picUrl}`;
+        if (picUrl && picUrl.startsWith('/')) return `http://localhost:8000${picUrl}`;
         return picUrl;
     };
 

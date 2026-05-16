@@ -4,39 +4,46 @@ import axios from 'axios';
 import { Container, Row, Col, Card, CardBody, Button, Badge, Input } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const ProfilePage = () => {
     const navigate = useNavigate();
+
+    // 1. Lemos o ID do URL (se estivermos a ver o perfil de outra pessoa)
     const { id } = useParams();
-    const currentUserId = localStorage.getItem('matchup_user_id');
-    
-    const profileId = id || currentUserId; 
-    const isMyProfile = profileId === currentUserId;
+
+    // 2. Trazemos o utilizador global do Contexto (em vez do localStorage)
+    const { user } = useUserContext();
+
+    // 3. MATEMÁTICA DE IDs (Segurança de Tipos)
+    // Se vier um ID no URL, usamos esse. Se não vier, mostramos o perfil do utilizador que fez login.
+    const profileId = id ? Number(id) : user?.player_id;
+
+    // O botão "Editar Perfil" só aparece se o perfil que estamos a ver for o nosso!
+    const isMyProfile = profileId === Number(user?.player_id);
 
     const [profile, setProfile] = useState(null);
     const [userTeams, setUserTeams] = useState([]);
     const [userPhotos, setUserPhotos] = useState([]);
-    
+
     // Controlo de UI
     const [activeTab, setActiveTab] = useState('photos');
     const [selectedModality, setSelectedModality] = useState('Geral');
 
     useEffect(() => {
-        if (!currentUserId) {
-            navigate('/login');
-            return;
+        if (profileId) { // Só carrega os dados se já tivermos a certeza de qual é o ID
+            fetchProfileData();
+            fetchUserTeams();
+            fetchUserPhotos();
         }
-        fetchProfileData();
-        fetchUserTeams();
-        fetchUserPhotos();
-    }, [profileId, currentUserId, navigate]);
+    }, [profileId]); // Executa sempre que mudares de um perfil para outro
 
     const fetchProfileData = async () => {
         try {
-            const res = await axios.get(`http://127.0.0.1:8000/api/players/${profileId}/`);
+            // Alterado de user.player.id para profileId (dinâmico)
+            const res = await axios.get(`http://localhost:8000/api/players/${profileId}/`);
             setProfile(res.data);
-            
-            // Se o jogador tiver modalidades registadas, seleciona a primeira por defeito
+
             if (res.data.sport_positions && Object.keys(res.data.sport_positions).length > 0) {
                 setSelectedModality(Object.keys(res.data.sport_positions)[0]);
             }
@@ -47,9 +54,9 @@ const ProfilePage = () => {
 
     const fetchUserTeams = async () => {
         try {
-            const res = await axios.get(`http://127.0.0.1:8000/api/teams/`);
-            // Filtra as equipas onde ele é capitão ou membro
-            const myTeams = res.data.filter(t => t.captain == profileId || (t.members && t.members.includes(parseInt(profileId))));
+            const res = await axios.get(`http://localhost:8000/api/teams/`);
+            // Alterado para usar o profileId dinâmico
+            const myTeams = res.data.filter(t => t.captain == profileId || (t.members && t.members.includes(profileId)));
             setUserTeams(myTeams);
         } catch (error) {
             console.error("Erro ao carregar equipas:", error);
@@ -58,11 +65,11 @@ const ProfilePage = () => {
 
     const fetchUserPhotos = async () => {
         try {
-            const res = await axios.get(`http://127.0.0.1:8000/api/highlights/`);
+            const res = await axios.get(`http://localhost:8000/api/highlights/`);
+            // Alterado para usar o profileId dinâmico
             const myPhotos = res.data.filter(photo => photo.player == profileId);
-            // Inverte para as mais recentes primeiro
             setUserPhotos(myPhotos.reverse());
-        } catch (error) {
+        } catch {
             console.log("Sem fotos ou endpoint não criado ainda.");
         }
     };
@@ -70,7 +77,7 @@ const ProfilePage = () => {
     const getPic = (obj) => {
         if (!obj) return null;
         let picUrl = obj.photo || obj.image || obj.profile_picture || obj.logo;
-        if (picUrl && picUrl.startsWith('/')) return `http://127.0.0.1:8000${picUrl}`;
+        if (picUrl && picUrl.startsWith('/')) return `http://localhost:8000${picUrl}`;
         return picUrl;
     };
 

@@ -2,40 +2,52 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Dropdown, DropdownToggle } from 'reactstrap';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const ProfileDropdown = () => {
-    const navigate = useNavigate();
+const navigate = useNavigate();
+
+    // 2. Extrair o utilizador e a função de atualizar (setUser) do contexto
+    const { user, setUser } = useUserContext();
+
+    // 3. Garantir o ID numérico e o username diretamente do estado global de forma segura
+    const userId = Number(user?.player_id);
+    const username = user?.username || "Jogador";
+
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [userProfilePic, setUserProfilePic] = useState(null);
     const [nextGame, setNextGame] = useState(null);
-    const username = localStorage.getItem('matchup_username') || "Jogador";
 
+    // 4. O useEffect agora reage de forma fluída à variável do contexto
     useEffect(() => {
+        // Se por algum motivo o dropdown for desenhado sem sessão, não tentamos ir buscar nada
+        if (!userId) return;
+
         const fetchUserData = async () => {
-            const userId = localStorage.getItem('matchup_user_id');
-            if (!userId) return;
             try {
                 // 1. Foto de Perfil
-                const resPlayer = await axios.get(`http://127.0.0.1:8000/api/players/${userId}/`);
-                let picUrl = resPlayer.data.photo || resPlayer.data.image || resPlayer.data.avatar || resPlayer.data.profile_picture; 
+                const resPlayer = await axios.get(`http://localhost:8000/api/players/${userId}/`);
+                let picUrl = resPlayer.data.photo || resPlayer.data.image || resPlayer.data.avatar || resPlayer.data.profile_picture;
                 if (picUrl) {
-                    if (picUrl.startsWith('/')) picUrl = `http://127.0.0.1:8000${picUrl}`;
+                    if (picUrl.startsWith('/')) picUrl = `http://localhost:8000${picUrl}`;
                     setUserProfilePic(picUrl);
                 }
 
                 // 2. Jogos Aceites
-                const resRegs = await axios.get(`http://127.0.0.1:8000/api/registrations/`);
-                const myAcceptedRegs = resRegs.data.filter(reg => reg.player == userId && reg.status === 'APPROVED');
-                
-                const resGames = await axios.get(`http://127.0.0.1:8000/api/games/`);
-                let myGames = myAcceptedRegs.map(reg => resGames.data.find(g => g.id == reg.game)).filter(g => g !== undefined);
-                
+                const resRegs = await axios.get(`http://localhost:8000/api/registrations/`);
+
+                // Graças ao Number(), podemos usar '===' de forma segura!
+                const myAcceptedRegs = resRegs.data.filter(reg => reg.player === userId && reg.status === 'APPROVED');
+
+                const resGames = await axios.get(`http://localhost:8000/api/games/`);
+                let myGames = myAcceptedRegs.map(reg => resGames.data.find(g => g.id === reg.game)).filter(g => g !== undefined);
+
                 const agora = new Date();
-                
+
                 // Filtra para mostrar apenas jogos no futuro
                 let jogosFuturos = myGames.filter(g => new Date(`${g.date}T${g.time}`) >= agora);
                 jogosFuturos.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-                
+
                 // Guarda apenas o primeiro (se existir)
                 if (jogosFuturos.length > 0) {
                     setNextGame(jogosFuturos[0]);
@@ -46,21 +58,33 @@ const ProfileDropdown = () => {
             }
         };
         fetchUserData();
-    }, []);
+    }, [userId]); // O efeito é reavaliado se o ID de utilizador mudar
 
+    // 5. A LÓGICA DE LOGOUT DO SLIDE 18
     const handleLogout = async () => {
         try {
-            // Pede ao Django para apagar a sessão no servidor
-            await axios.post('http://127.0.0.1:8000/api/logout/');
+            // Pede ao Django para apagar a sessão no servidor (destrói o Cookie nativo)
+            await axios.post('http://localhost:8000/api/logout/', {}, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' }, withCredentials: true
+            });
         } catch (error) {
             console.error("Erro ao fechar sessão no backend:", error);
         } finally {
-            // Limpa os dados no browser do utilizador (faz sempre, mesmo que o backend falhe)
-            localStorage.removeItem('matchup_user_id');
-            localStorage.removeItem('matchup_username');
-            window.location.href = '/landing';
+            // ADEUS localStorage e window.location.href!
+            // Atualizamos o contexto de forma reativa:
+            setUser(null);
+
+            // Redirecionamos através do React Router de forma suave
+            navigate('/landing');
         }
     };
+
+    const getCSRFToken = () => {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+};
 
     return (
         <Dropdown isOpen={profileDropdownOpen} toggle={() => setProfileDropdownOpen(!profileDropdownOpen)}>

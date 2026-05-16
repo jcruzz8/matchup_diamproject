@@ -4,11 +4,17 @@ import axios from 'axios';
 import { Container, Card, CardBody, FormGroup, Label, Input, Button, Alert, Modal, ModalHeader, ModalBody, ListGroup, ListGroupItem } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const CreateTeamPage = () => {
-    const navigate = useNavigate();
-    const userId = localStorage.getItem('matchup_user_id');
+const navigate = useNavigate();
     const fileInputRef = useRef(null);
+
+    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    const { user } = useUserContext();
+
+    // Garantir que o ID é um número seguro para as operações seguintes
+    const userId = Number(user?.player_id);
 
     // Estados do Formulário
     const [teamName, setTeamName] = useState('');
@@ -16,7 +22,7 @@ const CreateTeamPage = () => {
     const [city, setCity] = useState('');
     const [logo, setLogo] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
-    
+
     // Estados do Treinador e Amigos
     const [coach, setCoach] = useState(null);
     const [myFriends, setMyFriends] = useState([]);
@@ -26,33 +32,32 @@ const CreateTeamPage = () => {
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // 3. useEffect super limpo! Removemos o "navigate('/login')" e movemos
+    // a função fetchUserData para fora, tornando o código mais legível.
     useEffect(() => {
-        if (!userId) {
-            navigate('/login');
-            return;
+        // Como a rota está protegida no App.jsx, temos a certeza que o userId existe
+        if (userId) {
+            fetchUserData();
         }
+    }, [userId]);
 
-        // Buscar dados do utilizador e colegas
-        const fetchUserData = async () => {
-            try {
-                const resPlayer = await axios.get(`http://127.0.0.1:8000/api/players/${userId}/`);
-                setCurrentUser(resPlayer.data);
-                
-                if (resPlayer.data.colegas && resPlayer.data.colegas.length > 0) {
-                    const friendsData = await Promise.all(
-                        resPlayer.data.colegas.map(friendId => 
-                            axios.get(`http://127.0.0.1:8000/api/players/${friendId}/`).then(res => res.data)
-                        )
-                    );
-                    setMyFriends(friendsData);
-                }
-            } catch (error) {
-                console.error("Erro ao carregar dados:", error);
+    const fetchUserData = async () => {
+        try {
+            const resPlayer = await axios.get(`http://localhost:8000/api/players/${userId}/`);
+            setCurrentUser(resPlayer.data);
+
+            if (resPlayer.data.colegas && resPlayer.data.colegas.length > 0) {
+                const friendsData = await Promise.all(
+                    resPlayer.data.colegas.map(friendId =>
+                        axios.get(`http://localhost:8000/api/players/${friendId}/`).then(res => res.data)
+                    )
+                );
+                setMyFriends(friendsData);
             }
-        };
-
-        fetchUserData();
-    }, [userId, navigate]);
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error);
+        }
+    };
 
     // Função para o upload da imagem
     const handleImageChange = (e) => {
@@ -88,7 +93,7 @@ const CreateTeamPage = () => {
         }
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/teams/', formData, {
+            await axios.post('http://localhost:8000/api/teams/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -106,7 +111,7 @@ const CreateTeamPage = () => {
     const getProfilePic = (player) => {
         if (!player) return null;
         let picUrl = player.photo || player.image || player.profile_picture;
-        if (picUrl && picUrl.startsWith('/')) return `http://127.0.0.1:8000${picUrl}`;
+        if (picUrl && picUrl.startsWith('/')) return `http://localhost:8000${picUrl}`;
         return picUrl;
     };
 

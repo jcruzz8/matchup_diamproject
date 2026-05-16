@@ -132,6 +132,7 @@ def login_view(request):
 
     if user is not None:
         login(request, user)
+        #request.session.cycle_key()
         return Response({
                 "message": "Login efetuado com sucesso!",
                 "player_id": user.player.id,
@@ -145,10 +146,16 @@ def login_view(request):
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     try:
+        #request.session.flush()
         # A magia acontece aqui: o Django limpa os dados da sessão atual
         logout(request)
 
-        return Response({"message": "Sessão terminada com sucesso!"}, status=status.HTTP_200_OK)
+        response = Response({"message": "Sessão terminada com sucesso!"}, status=status.HTTP_200_OK)
+
+        #response.delete_cookie('sessionid')
+        #response.delete_cookie('csrftoken')
+
+        return response
     except Exception as e:
         return Response({"error": "Erro ao terminar sessão."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -255,3 +262,11 @@ def player_detail(request, pk):
             return Response({'error': 'Precisas de fazer login para editar isto.'}, status=status.HTTP_401_UNAUTHORIZED)
         player.user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_view(request):
+    return Response({
+        'username': request.user.username,
+        'player_id': request.user.player.id
+    })

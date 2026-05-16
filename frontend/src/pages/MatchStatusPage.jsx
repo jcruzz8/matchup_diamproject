@@ -5,28 +5,35 @@ import { Container, Badge } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
 import MatchCard from '../components/MatchCard';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const MatchStatusPage = () => {
-    const navigate = useNavigate();
+const navigate = useNavigate();
     const [myRequests, setMyRequests] = useState([]);
-    const [activeTab, setActiveTab] = useState('APPROVED'); 
-    const userId = localStorage.getItem('matchup_user_id');
+    const [activeTab, setActiveTab] = useState('APPROVED');
 
+    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    const { user } = useUserContext();
+
+    // Garantir que o ID é um número seguro
+    const userId = Number(user?.player_id);
+
+    // 3. useEffect super limpo: já não precisamos do navigate('/login') aqui!
     useEffect(() => {
-        if (!userId) {
-            navigate('/login');
-            return;
+        if (userId) {
+            fetchMyStatuses();
         }
-        fetchMyStatuses();
-    }, [userId, navigate]);
+    }, [userId]);
 
     const fetchMyStatuses = async () => {
         try {
-            const resRegs = await axios.get(`http://127.0.0.1:8000/api/registrations/`);
-            const userRegs = resRegs.data.filter(reg => reg.player == userId);
-            
-            const resGames = await axios.get(`http://127.0.0.1:8000/api/games/`);
-            
+            const resRegs = await axios.get(`http://localhost:8000/api/registrations/`);
+
+            // 4. Como userId agora é um Number garantido, podemos usar '==='
+            const userRegs = resRegs.data.filter(reg => reg.player === userId);
+
+            const resGames = await axios.get(`http://localhost:8000/api/games/`);
+
             // Ordena os pedidos do mais recente (maior ID) para o mais antigo
             userRegs.sort((a, b) => b.id - a.id);
 
@@ -37,7 +44,8 @@ const MatchStatusPage = () => {
             for (const reg of userRegs) {
                 if (!seenGames.has(reg.game)) {
                     seenGames.add(reg.game);
-                    const gameInfo = resGames.data.find(g => g.id == reg.game);
+                    // Aqui mantemos '==' ou convertemos g.id para Number se necessário
+                    const gameInfo = resGames.data.find(g => Number(g.id) === Number(reg.game));
                     if (gameInfo) {
                         uniqueRequests.push({ ...reg, gameDetails: gameInfo });
                     }

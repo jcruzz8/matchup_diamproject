@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Card, CardBody, Button, Badge, Row, Col, Alert, Modal, ModalHeader, ModalBody, ModalFooter, Input, Label, FormGroup } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
     if (!positionId || (!positionId.includes('campo') && !positionId.includes('banco'))) {
@@ -55,38 +56,36 @@ const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
 };
 
 const OrganizerDashboard = () => {
-    const navigate = useNavigate();
-    const [username, setUsername] = useState('');
+const navigate = useNavigate();
+
+    // 2. Extrair o utilizador do contexto global
+    const { user } = useUserContext();
+
+    // Garantir que o ID é um número seguro
+    const userId = Number(user?.player_id);
+
     const [myGames, setMyGames] = useState([]);
     const [allRegistrations, setAllRegistrations] = useState([]);
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingGame, setEditingGame] = useState(null);
-    const userId = localStorage.getItem('matchup_user_id');
+
+    // 3. REMOVIDO: Estados inúteis (username), funções não utilizadas (handleLogout)
+    // e o antigo useEffect do localStorage!
 
     useEffect(() => {
-        const storedUsername = localStorage.getItem('matchup_username');
-        if (storedUsername) setUsername(storedUsername);
-    }, []);
-
-    const handleLogout = () => {
-        console.log("Logout iniciado");
-        localStorage.removeItem('matchup_user_id');
-        localStorage.removeItem('matchup_username');
-        window.location.href = '/landing';
-    };
-
-    useEffect(() => {
-        if (!userId) navigate('/login');
-        else fetchMyData();
-    }, [userId, navigate]);
+        // Se temos um ID válido (garantido pelas rotas protegidas do App.jsx)
+        if (userId) {
+            fetchMyData();
+        }
+    }, [userId]);
 
     const fetchMyData = async () => {
         try {
-            const resGames = await axios.get(`http://127.0.0.1:8000/api/games/?organizer=${userId}`);
+            const resGames = await axios.get(`http://localhost:8000/api/games/?organizer=${userId}`);
             setMyGames(resGames.data.reverse()); // Mais recentes primeiro
 
-            const resRegs = await axios.get(`http://127.0.0.1:8000/api/registrations/`);
+            const resRegs = await axios.get(`http://localhost:8000/api/registrations/`);
             setAllRegistrations(resRegs.data);
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
@@ -95,7 +94,7 @@ const OrganizerDashboard = () => {
 
     const handleAction = async (regId, actionType) => {
         try {
-            await axios.patch(`http://127.0.0.1:8000/api/registrations/${regId}/`, { status: actionType });
+            await axios.patch(`http://localhost:8000/api/registrations/${regId}/`, { status: actionType });
             setAlertConfig({ show: true, message: actionType === 'APPROVED' ? 'Inscrição Aceite!' : 'Inscrição Rejeitada.', color: actionType === 'APPROVED' ? 'success' : 'secondary' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
             fetchMyData();
@@ -109,7 +108,7 @@ const OrganizerDashboard = () => {
     const handleDeleteGame = async (gameId) => {
         if (window.confirm("Tens a certeza que queres apagar este Match? Esta ação vai cancelar todos os pedidos.")) {
             try {
-                await axios.delete(`http://127.0.0.1:8000/api/games/${gameId}/`);
+                await axios.delete(`http://localhost:8000/api/games/${gameId}/`);
                 setAlertConfig({ show: true, message: 'Match apagado com sucesso.', color: 'success' });
                 setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
                 fetchMyData();
@@ -128,7 +127,7 @@ const OrganizerDashboard = () => {
 
     const handleUpdateGame = async () => {
         try {
-            await axios.patch(`http://127.0.0.1:8000/api/games/${editingGame.id}/`, {
+            await axios.patch(`http://localhost:8000/api/games/${editingGame.id}/`, {
                 location: editingGame.location,
                 date: editingGame.date,
                 time: editingGame.time,
