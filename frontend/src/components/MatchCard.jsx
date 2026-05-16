@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Card, CardBody, Row, Col, Button, Modal, ModalHeader, ModalBody, ModalFooter, ListGroup, ListGroupItem, Alert } from 'reactstrap';
 import axios from 'axios';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const MatchCard = ({ game, userRegistrationStatus }) => {
+// 2. Extrair o utilizador do contexto
+    const { user } = useUserContext();
+
+    // 3. Garantir o ID numérico seguro (prevenido para o caso de no futuro mostrares este cartão numa página pública)
+    const userId = user?.player_id ? Number(user.player_id) : null;
+
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
-
     const [posicaoSelecionada, setPosicaoSelecionada] = useState(null);
-
     const [modalOpen, setModalOpen] = useState(false);
     const [myTeams, setMyTeams] = useState([]);
     const [selectedTeam, setSelectedTeam] = useState(null);
@@ -19,7 +24,7 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
 
     // Abre o Modal e vai buscar as equipas ao Django
     const openTeamModal = async (position) => {
-        const userId = localStorage.getItem('matchup_user_id');
+        // Já não lemos do localStorage! Usamos a variável userId
         if (!userId) {
             setAlertConfig({ show: true, message: 'Precisas de iniciar sessão para inscrever a tua equipa!', color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
@@ -29,7 +34,7 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
         setTargetPosition(position);
 
         try {
-            const response = await axios.get(`http://127.0.0.1:8000/api/teams/?captain=${userId}`);
+            const response = await axios.get(`http://localhost:8000/api/teams/?captain=${userId}`);
             setMyTeams(response.data);
             setModalOpen(true);
         } catch (error) {
@@ -41,16 +46,14 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
 
     // Envia o pedido de inscrição (Fica Pendente)
     const handleTeamRegistration = async () => {
-        const userId = localStorage.getItem('matchup_user_id');
-        if (!selectedTeam) return;
+        if (!selectedTeam || !userId) return;
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/registrations/', {
+            await axios.post('http://localhost:8000/api/registrations/', {
                 game: game.id, player: userId, team: selectedTeam.id, position_id: targetPosition, status: 'PENDING'
             });
 
             setModalOpen(false); // Fecha o modal
-
             setAlertConfig({ show: true, message: 'Pedido da equipa enviado com sucesso!', color: 'success' });
             setTimeout(() => window.location.reload(), 2000);
 
@@ -68,23 +71,21 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             if (num === 1) return [{ top: '50%', left: '50%' }];
             if (num === 2) return [{ top: '35%', left: '35%' }, { top: '35%', left: '65%' }];
             if (num === 3) return [{ top: '25%', left: '50%' }, { top: '50%', left: '25%' }, { top: '50%', left: '75%' }];
-            // Squad 5v5
             return [
                 { top: '15%', left: '50%' }, { top: '40%', left: '25%' }, { top: '40%', left: '75%' },
                 { top: '70%', left: '35%' }, { top: '70%', left: '65%' }
             ];
         } else {
-            // Futebol
             if (num === 5) return [
-                { top: '85%', left: '50%' }, // GR
-                { top: '55%', left: '25%' }, { top: '55%', left: '75%' }, // Defesas
-                { top: '25%', left: '35%' }, { top: '25%', left: '65%' }  // Avançados
+                { top: '85%', left: '50%' },
+                { top: '55%', left: '25%' }, { top: '55%', left: '75%' },
+                { top: '25%', left: '35%' }, { top: '25%', left: '65%' }
             ];
             if (num === 7) return [
-                { top: '85%', left: '50%' }, // GR
-                { top: '65%', left: '25%' }, { top: '65%', left: '75%' }, // Defesas
-                { top: '40%', left: '20%' }, { top: '40%', left: '50%' }, { top: '40%', left: '80%' }, // Meio
-                { top: '15%', left: '50%' } // Avançado
+                { top: '85%', left: '50%' },
+                { top: '65%', left: '25%' }, { top: '65%', left: '75%' },
+                { top: '40%', left: '20%' }, { top: '40%', left: '50%' }, { top: '40%', left: '80%' },
+                { top: '15%', left: '50%' }
             ];
             if (num === 9) return [
                 { top: '85%', left: '50%' },
@@ -92,7 +93,6 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                 { top: '40%', left: '25%' }, { top: '40%', left: '75%' },
                 { top: '15%', left: '25%' }, { top: '15%', left: '50%' }, { top: '15%', left: '75%' }
             ];
-            // 11v11
             return [
                 { top: '90%', left: '50%' },
                 { top: '70%', left: '15%' }, { top: '70%', left: '38%' }, { top: '70%', left: '62%' }, { top: '70%', left: '85%' },
@@ -103,20 +103,17 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
     };
 
     const posicoesCampo = getPosicoes(game.modality, game.titulares);
-
-    // Converte suplentes num array 
     const posicoesBanco = Array.from({ length: parseInt(game.suplentes || 0) }, (_, i) => i);
 
     const handleInscrever = async () => {
-        const userId = localStorage.getItem('matchup_user_id');
-
         if (!userId) {
             setAlertConfig({ show: true, message: 'Precisas de ter sessão iniciada para te inscreveres!', color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
             return;
         }
 
-        if (game.occupied_data?.players?.includes(parseInt(userId))) {
+        // Simplificado de parseInt(localStorage...) para apenas userId
+        if (game.occupied_data?.players?.includes(userId)) {
             setAlertConfig({ show: true, message: 'Já tens um pedido pendente ou aceite para este match!', color: 'warning' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'warning' }), 3000);
             return;
@@ -124,7 +121,7 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
 
         try {
             if (game.distribution_model === 'Auto-Balanceamento') {
-                await axios.post('http://127.0.0.1:8000/api/registrations/', {
+                await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: 'auto', status: 'PENDING'
                 });
 
@@ -133,7 +130,7 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             }
             else if (game.distribution_model === 'Escolha Livre') {
                 if (!posicaoSelecionada) return;
-                await axios.post('http://127.0.0.1:8000/api/registrations/', {
+                await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: posicaoSelecionada.id, status: 'PENDING'
                 });
 

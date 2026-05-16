@@ -11,27 +11,20 @@ const HomePage = () => {
     const [games, setGames] = useState([]); // Estado para guardar os jogos reais
     const [activeTab, setActiveTab] = useState('match'); // Controla o que vemos (Match's ou Highlights)
 
-    // Efeito para verificar login e buscar os jogos
-    useEffect(() => {
-        const userId = localStorage.getItem('matchup_user_id');
-
-        if (!userId) {
-            navigate('/landing');
-        } else {
-            fetchGames(); // Chama a função para buscar os jogos
-        }
-    }, [navigate]);
-
     // Função para ir buscar os jogos ao Django
     const fetchGames = async () => {
         try {
-            const response = await axios.get('http://127.0.0.1:8000/api/games/');
+            const response = await axios.get('http://localhost:8000/api/games/');
             // Inverter a ordem para os jogos mais recentes aparecerem primeiro
             setGames(response.data.reverse());
         } catch (error) {
             console.error("Erro ao carregar os jogos:", error);
         }
     };
+
+    useEffect(() => {
+        fetchGames();
+    }, []);
 
     return (
         <div className="bg-light min-vh-100 pb-5">

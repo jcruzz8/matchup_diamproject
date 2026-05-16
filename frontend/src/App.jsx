@@ -12,24 +12,28 @@ import CommunityPage from './pages/CommunityPage';
 import SearchPage from './pages/SearchPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
+import {useUserContext} from "./context/UserProvider.jsx";
 
 function App() {
+
+  const { user } = useUserContext();
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={user?<HomePage/>:<LandingPage/>}/>
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/organizar" element={<OrganizerDashboard />} />
-        <Route path="/criar" element={<CreateMenuPage />} /> 
+        <Route path="/criar" element={<CreateMenuPage />} />
         <Route path="/criar/jogo" element={<CreateGamePage />} />
         <Route path="/criar/equipa" element={<CreateTeamPage />} />
         <Route path="/estado-match" element={<MatchStatusPage />} />
         <Route path="/comunidade" element={<CommunityPage />} />
         <Route path="/pesquisar" element={<SearchPage />} />
-        <Route path="/perfil" element={<ProfilePage />} />
-        <Route path="/editar-perfil" element={<EditProfilePage />} />
+        <Route path="/perfil" element={user?<ProfilePage/>:<LandingPage/>} />
+        <Route path="/editar-perfil" element={user?<EditProfilePage/>:<LandingPage/>} />
       </Routes>
     </BrowserRouter>
   );

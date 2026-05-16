@@ -3,15 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Card, CardBody, Form, FormGroup, Label, Input, Button, Alert, Row, Col } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const EditProfilePage = () => {
-    const navigate = useNavigate();
-    const userId = localStorage.getItem('matchup_user_id');
+const navigate = useNavigate();
     const fileInputRef = useRef(null);
+
+    // 2. Extrair o utilizador e a função setUser do contexto (adeus localStorage!)
+    const { user, setUser } = useUserContext();
+
+    // Garantir que o ID é um número
+    const userId = Number(user?.player_id);
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Estado para a foto
     const [newPhoto, setNewPhoto] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -34,23 +40,22 @@ const EditProfilePage = () => {
     const calculateAge = (dob) => {
         if (!dob) return '';
         const diffMs = Date.now() - new Date(dob).getTime();
-        const ageDt = new Date(diffMs); 
+        const ageDt = new Date(diffMs);
         return Math.abs(ageDt.getUTCFullYear() - 1970);
     };
 
+    // 3. O useEffect fica super limpo. A rota App.jsx já nos protege!
     useEffect(() => {
-        if (!userId) {
-            navigate('/login');
-            return;
+        if (userId) {
+            fetchUserData();
         }
-        fetchUserData();
-    }, [userId, navigate]);
+    }, [userId]);
 
     const fetchUserData = async () => {
         try {
-            const res = await axios.get(`http://127.0.0.1:8000/api/players/${userId}/`);
+            const res = await axios.get(`http://localhost:8000/api/players/${userId}/`);
             const data = res.data;
-            
+
             setFormData({
                 first_name: data.first_name || '',
                 last_name: data.last_name || '',
@@ -67,7 +72,7 @@ const EditProfilePage = () => {
             // Configurar foto atual
             let picUrl = data.photo || data.image || data.profile_picture;
             if (picUrl) {
-                if (picUrl.startsWith('/')) picUrl = `http://127.0.0.1:8000${picUrl}`;
+                if (picUrl.startsWith('/')) picUrl = `http://localhost:8000${picUrl}`;
                 setPreviewUrl(picUrl);
             }
         } catch (error) {
@@ -102,37 +107,45 @@ const EditProfilePage = () => {
         setIsSubmitting(true);
 
         const dataToSend = new FormData();
-        
+
         Object.keys(formData).forEach(key => {
-            // Se for nulo ou vazio e não for boolean, não enviamos ou enviamos vazio consoante a necessidade
             if (formData[key] !== null && formData[key] !== undefined) {
                 dataToSend.append(key, formData[key]);
             }
         });
 
-        // Só anexa a foto se o utilizador tiver escolhido uma NOVA foto
         if (newPhoto) {
             dataToSend.append('photo', newPhoto);
         }
 
         try {
-            // Usamos PATCH em vez de PUT para atualizar apenas os campos enviados
-            await axios.patch(`http://127.0.0.1:8000/api/players/${userId}/`, dataToSend, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            await axios.patch(`http://localhost:8000/api/players/${userId}/`, dataToSend, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' }, withCredentials: true
             });
 
-            // Atualizar o username no localStorage se foi alterado
-            localStorage.setItem('matchup_username', formData.username);
+            // 4. A MAGIA ACONTECE AQUI: Em vez do localStorage, atualizamos o contexto global!
+            // Se o utilizador mudou de username, a Navbar e outras páginas reagem de imediato.
+            if (formData.username !== user?.username) {
+                setUser({ ...user, username: formData.username });
+            }
 
             showAlert('Perfil atualizado com sucesso!', 'success');
             setTimeout(() => navigate('/perfil'), 2000);
 
         } catch (error) {
             console.error("Erro ao atualizar perfil:", error);
-            showAlert('Erro ao atualizar. O Username/Email já existe?', 'danger');
+            // Agora já mostramos os erros verdadeiros do backend!
+            const errorMessage = error.response?.data?.error || 'Erro ao atualizar. O Username/Email já existe?';
+            showAlert(errorMessage, 'danger');
             setIsSubmitting(false);
         }
     };
+
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
 
     return (
         <div className="bg-light min-vh-100 pb-5">

@@ -1,17 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, CardBody } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
 
 const CreateMenuPage = () => {
     const navigate = useNavigate();
-    const [username, setUsername] = useState('');
-
-    useEffect(() => {
-        const storedUsername = localStorage.getItem('matchup_username');
-        if (storedUsername) setUsername(storedUsername);
-    }, []);
 
     return (
         <div className="landing-bg min-vh-100 pb-5 d-flex flex-column">

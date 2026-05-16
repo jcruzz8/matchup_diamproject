@@ -107,7 +107,7 @@ const RegisterPage = () => {
         submitData.append('sport_positions', JSON.stringify(formData.positions));
 
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/players/', submitData, { // Comunica pelo axios com o Django, e espera pela resposta
+            const response = await axios.post('http://localhost:8000/api/players/', submitData, { // Comunica pelo axios com o Django, e espera pela resposta
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 

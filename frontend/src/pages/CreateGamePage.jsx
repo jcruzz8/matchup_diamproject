@@ -1,14 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button, Alert } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const CreateGamePage = () => {
-    const navigate = useNavigate();
-    const organizerId = localStorage.getItem('matchup_user_id');
+const navigate = useNavigate();
 
+    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    const { user } = useUserContext();
+
+    // Garantir que temos o ID correto para associar ao jogo
+    const organizerId = user?.player_id;
+
+    // 3. O formData agora usa a variável protegida do contexto
     const [formData, setFormData] = useState({
         modality: 'Futebol',
         location: '',
@@ -25,9 +32,8 @@ const CreateGamePage = () => {
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
 
-    useEffect(() => {
-        if (!organizerId) navigate('/login');
-    }, [organizerId, navigate]);
+    // 4. REMOVIDO: O useEffect que verificava o organizerId e fazia navigate('/login')
+    // já não é necessário! A rota protegida no teu App.jsx trata disso por nós.
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -44,7 +50,7 @@ const CreateGamePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/games/', formData);
+            await axios.post('http://localhost:8000/api/games/', formData);
             setAlertConfig({ show: true, message: 'Jogo criado com sucesso! A preparar o campo...', color: 'success' });
             setTimeout(() => navigate('/'), 2000);
         } catch (error) {

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Input, Row, Col } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
@@ -7,8 +6,7 @@ import BottomNavBar from '../components/BottomNavBar';
 import MatchCard from '../components/MatchCard';
 
 const SearchPage = () => {
-    const navigate = useNavigate();
-    const userId = localStorage.getItem('matchup_user_id');
+// 2. Apagámos o navigate e o localStorage por completo!
 
     const [allGames, setAllGames] = useState([]);
     const [filteredGames, setFilteredGames] = useState([]);
@@ -18,17 +16,16 @@ const SearchPage = () => {
     const [modalityFilter, setModalityFilter] = useState('Todas');
     const [dateFilter, setDateFilter] = useState('Todas');
 
+    // 3. useEffect super limpo e direto ao assunto.
+    // Como o React só desenha esta página se houver sessão válida,
+    // a única preocupação do componente é carregar os dados!
     useEffect(() => {
-        if (!userId) {
-            navigate('/login');
-            return;
-        }
         fetchAllGames();
-    }, [userId, navigate]);
+    }, []);
 
     const fetchAllGames = async () => {
         try {
-            const response = await axios.get('http://127.0.0.1:8000/api/games/');
+            const response = await axios.get('http://localhost:8000/api/games/');
             const jogos = response.data.reverse();
             
             const agora = new Date();
