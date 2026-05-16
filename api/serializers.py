@@ -6,6 +6,11 @@ class PlayerSerializer(serializers.ModelSerializer):
     followers_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
 
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
     class Meta:
         model = Player
         fields = '__all__' # all diz ao django para incluir todos os campos 
@@ -58,7 +63,7 @@ class GameSerializer(serializers.ModelSerializer):
                 
         return data
 class RegistrationSerializer(serializers.ModelSerializer):
-    player_username = serializers.CharField(source='player.username', read_only=True)
+    player_username = serializers.CharField(source='player.user.username', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
 
     class Meta:

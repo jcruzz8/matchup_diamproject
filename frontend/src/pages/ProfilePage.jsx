@@ -133,7 +133,7 @@ const ProfilePage = () => {
                             )}
                         </div>
 
-                        <h4 className="fw-bold mb-0 text-dark">{profile.name}</h4>
+                        <h4 className="fw-bold mb-0 text-dark">{profile.first_name} {profile.last_name}</h4>
                         <div className="text-muted fw-semibold mb-3">@{profile.username}</div>
                         
                         <div className="d-flex justify-content-center gap-3 mb-4 text-muted small fw-bold">

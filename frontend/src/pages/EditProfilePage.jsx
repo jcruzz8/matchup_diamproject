@@ -18,7 +18,8 @@ const EditProfilePage = () => {
 
     // Estado do formulário
     const [formData, setFormData] = useState({
-        name: '',
+        first_name: '',
+        last_name: '',
         username: '',
         email: '',
         phone: '',
@@ -51,7 +52,8 @@ const EditProfilePage = () => {
             const data = res.data;
             
             setFormData({
-                name: data.name || '',
+                first_name: data.first_name || '',
+                last_name: data.last_name || '',
                 username: data.username || '',
                 email: data.email || '',
                 phone: data.phone || '',
@@ -174,10 +176,20 @@ const EditProfilePage = () => {
                             {/* DADOS BÁSICOS */}
                             <h6 className="fw-bold mb-3 text-dark border-bottom pb-2">Informações Pessoais</h6>
 
-                            <FormGroup className="mb-3">
-                                <Label className="fw-bold small text-muted text-uppercase">Nome Completo</Label>
-                                <Input type="text" name="name" className="border-2 bg-light shadow-none fw-bold text-dark" value={formData.name} onChange={handleChange} required />
-                            </FormGroup>
+                            <Row className="gx-3">
+                                <Col xs={6}>
+                                    <FormGroup className="mb-3">
+                                        <Label className="fw-bold small text-muted text-uppercase">Primeiro Nome</Label>
+                                        <Input type="text" name="first_name" className="border-2 bg-light shadow-none fw-bold text-dark" value={formData.first_name} onChange={handleChange} required />
+                                    </FormGroup>
+                                </Col>
+                                <Col xs={6}>
+                                    <FormGroup className="mb-3">
+                                        <Label className="fw-bold small text-muted text-uppercase">Último Nome</Label>
+                                        <Input type="text" name="last_name" className="border-2 bg-light shadow-none fw-bold text-dark" value={formData.last_name} onChange={handleChange} required />
+                                    </FormGroup>
+                                </Col>
+                            </Row>
 
                             <FormGroup className="mb-3">
                                 <Label className="fw-bold small text-muted text-uppercase">Username</Label>

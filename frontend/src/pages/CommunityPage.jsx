@@ -297,7 +297,7 @@ const CommunityPage = () => {
                                             </div>
                                             <div>
                                                 <h6 className="fw-bold mb-0">{player.username}</h6>
-                                                <small className="text-muted">{player.name}</small>
+                                                <small className="text-muted">{player.first_name} {player.last_name}</small>
                                             </div>
                                         </div>
                                         {player.id == userId ? (

@@ -91,7 +91,8 @@ const RegisterPage = () => {
         const submitData = new FormData();
 
         submitData.append('username', formData.username);
-        submitData.append('name', formData.name);
+        submitData.append('first_name', formData.first_name)
+        submitData.append('last_name', formData.last_name)
         submitData.append('email', formData.email);
         submitData.append('password', formData.password);
         submitData.append('phone', formData.phone);
@@ -253,10 +254,19 @@ const RegisterPage = () => {
                                     <Row>
                                         <Col md={6}>
                                             <FormGroup>
-                                                <Label for="name" className="fw-bold">Primeiro e Último Nome *</Label>
-                                                <Input id="name" name="name" type="text" required onChange={handleChange} />
+                                                <Label for="first_name" className="fw-bold">Primeiro Nome *</Label>
+                                                <Input id="first_name" name="first_name" type="text" required onChange={handleChange} />
                                             </FormGroup>
                                         </Col>
+                                        <Col md={6}>
+                                            <FormGroup>
+                                                <Label for="last_name" className="fw-bold">Último Nome *</Label>
+                                                <Input id="last_name" name="last_name" type="text" required onChange={handleChange} />
+                                            </FormGroup>
+                                        </Col>
+                                    </Row>
+
+                                    <Row>
                                         <Col md={6}>
                                             <FormGroup>
                                                 <Label for="zone" className="fw-bold">Zona/Localidade</Label>
