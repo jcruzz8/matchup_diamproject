@@ -94,7 +94,8 @@ const navigate = useNavigate();
 
         try {
             await axios.post('http://localhost:8000/api/teams/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
             });
 
             setAlertConfig({ show: true, message: 'Equipa criada com sucesso!', color: 'success' });
@@ -107,6 +108,12 @@ const navigate = useNavigate();
             setIsSubmitting(false);
         }
     };
+
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
 
     const getProfilePic = (player) => {
         if (!player) return null;

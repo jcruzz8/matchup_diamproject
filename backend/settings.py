@@ -135,3 +135,6 @@ REST_FRAMEWORK = {
 }
 
 CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+MEDIA_URL = '/frontend/media/'
+MEDIA_ROOT  = os.path.join(BASE_DIR, 'frontend/media')

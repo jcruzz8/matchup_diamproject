@@ -94,7 +94,10 @@ const navigate = useNavigate();
 
     const handleAction = async (regId, actionType) => {
         try {
-            await axios.patch(`http://localhost:8000/api/registrations/${regId}/`, { status: actionType });
+            await axios.patch(`http://localhost:8000/api/registrations/${regId}/`, { status: actionType }, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
+            });
             setAlertConfig({ show: true, message: actionType === 'APPROVED' ? 'Inscrição Aceite!' : 'Inscrição Rejeitada.', color: actionType === 'APPROVED' ? 'success' : 'secondary' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
             fetchMyData();
@@ -108,7 +111,10 @@ const navigate = useNavigate();
     const handleDeleteGame = async (gameId) => {
         if (window.confirm("Tens a certeza que queres apagar este Match? Esta ação vai cancelar todos os pedidos.")) {
             try {
-                await axios.delete(`http://localhost:8000/api/games/${gameId}/`);
+                await axios.delete(`http://localhost:8000/api/games/${gameId}/`, {}, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
+            });
                 setAlertConfig({ show: true, message: 'Match apagado com sucesso.', color: 'success' });
                 setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
                 fetchMyData();
@@ -132,6 +138,9 @@ const navigate = useNavigate();
                 date: editingGame.date,
                 time: editingGame.time,
                 price: editingGame.price
+            }, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
             });
             
             setAlertConfig({ show: true, message: 'Match atualizado com sucesso!', color: 'success' });
@@ -144,6 +153,12 @@ const navigate = useNavigate();
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
+
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
 
     return (
         <div className="bg-light min-vh-100 pb-5">

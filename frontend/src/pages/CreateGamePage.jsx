@@ -50,7 +50,10 @@ const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:8000/api/games/', formData);
+            await axios.post('http://localhost:8000/api/games/', formData, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
+            });
             setAlertConfig({ show: true, message: 'Jogo criado com sucesso! A preparar o campo...', color: 'success' });
             setTimeout(() => navigate('/'), 2000);
         } catch (error) {
@@ -59,6 +62,12 @@ const navigate = useNavigate();
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
+
+    const getCSRFToken = () => {
+    return document.cookie.split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    }
 
     return (
         <div className="bg-light min-vh-100 pb-5">
