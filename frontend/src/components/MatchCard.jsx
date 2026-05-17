@@ -51,6 +51,9 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
         try {
             await axios.post('http://localhost:8000/api/registrations/', {
                 game: game.id, player: userId, team: selectedTeam.id, position_id: targetPosition, status: 'PENDING'
+            }, {
+                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                withCredentials: true
             });
 
             setModalOpen(false); // Fecha o modal
@@ -123,6 +126,9 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             if (game.distribution_model === 'Auto-Balanceamento') {
                 await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: 'auto', status: 'PENDING'
+                    }, {
+                    headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                    withCredentials: true
                 });
 
                 setAlertConfig({ show: true, message: 'Pedido enviado para Auto-Balanceamento!', color: 'success' });
@@ -132,6 +138,9 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                 if (!posicaoSelecionada) return;
                 await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: posicaoSelecionada.id, status: 'PENDING'
+                    }, {
+                    headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                    withCredentials: true
                 });
 
                 setAlertConfig({ show: true, message: 'Lugar Marcado! Aguarda a aprovação do organizador.', color: 'success' });
@@ -143,6 +152,12 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
+
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
 
     return (
         <>
