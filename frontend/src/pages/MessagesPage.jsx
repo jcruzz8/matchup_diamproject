@@ -6,21 +6,6 @@ import { useUserContext } from '../context/UserProvider.jsx';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
 const MessagesPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -42,15 +27,14 @@ const MessagesPage = () => {
     const [searchFriend, setSearchFriend] = useState('');
 
     const fetchData = async () => {
-        try {
-            const csrftoken = getCookie('csrftoken'); // <-- Puxar o token
+        try {// <-- Puxar o token
             
             const [playersRes, teamsRes, messagesRes] = await Promise.all([
                 axios.get('http://localhost:8000/api/players/'),
                 axios.get('http://localhost:8000/api/teams/'),
-                axios.get('http://localhost:8000/api/messages/', { 
-                    withCredentials: true,
-                    headers: { 'X-CSRFToken': csrftoken } // <-- Enviar o token no GET
+                axios.get('http://localhost:8000/api/messages/', {
+                headers: { 'X-CSRFToken':getCSRFToken() },
+                    withCredentials: true
                 })
             ]);
 
@@ -122,6 +106,12 @@ const MessagesPage = () => {
         }
     };
 
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
+
     useEffect(() => {
         if (!userId) return;
         fetchData();
@@ -174,11 +164,10 @@ const MessagesPage = () => {
         }
 
         try {
-            const csrftoken = getCookie('csrftoken');
             await axios.post('http://localhost:8000/api/messages/', payload, {
-                withCredentials: true,
-                headers: { 'X-CSRFToken': csrftoken }
-            });
+                headers: { 'X-CSRFToken':getCSRFToken() },
+                    withCredentials: true
+                });
             setNewMessage('');
             await fetchData(); // Força atualização imediata após enviar
         } catch (err) {
