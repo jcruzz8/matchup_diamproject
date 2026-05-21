@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Container, Card, CardBody, Button, Badge, Row, Col, Alert, Modal, ModalHeader, ModalBody, ModalFooter, Input, Label, FormGroup } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
-import {useUserContext} from "../context/UserProvider.jsx";
+import { useUserContext } from "../context/UserProvider.jsx";
 
 const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
     if (!positionId || (!positionId.includes('campo') && !positionId.includes('banco'))) {
@@ -33,7 +33,7 @@ const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
             else if (num === 7) posArray = [{ top: '85%', left: '50%' }, { top: '65%', left: '25%' }, { top: '65%', left: '75%' }, { top: '40%', left: '20%' }, { top: '40%', left: '50%' }, { top: '40%', left: '80%' }, { top: '15%', left: '50%' }];
             else posArray = [{ top: '90%', left: '50%' }, { top: '70%', left: '15%' }, { top: '70%', left: '38%' }, { top: '70%', left: '62%' }, { top: '70%', left: '85%' }, { top: '45%', left: '15%' }, { top: '45%', left: '38%' }, { top: '45%', left: '62%' }, { top: '45%', left: '85%' }, { top: '20%', left: '35%' }, { top: '20%', left: '65%' }];
         }
-        
+
         let targetPos = posArray[index] || { top: '50%', left: '50%' };
         // Se for equipa 2, inverte o Top
         if (!isEq1) targetPos = { ...targetPos, top: `${100 - parseInt(targetPos.top)}%` };
@@ -47,8 +47,8 @@ const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
             {/* Linha de meio campo */}
             <div className="position-absolute top-50 start-0 w-100 border-top border-secondary opacity-50"></div>
             {/* Ponto do Jogador */}
-            <div 
-                className="position-absolute translate-middle rounded-circle" 
+            <div
+                className="position-absolute translate-middle rounded-circle"
                 style={{ top: dotPos.top, left: dotPos.left, width: '8px', height: '8px', backgroundColor: color, boxShadow: '0 0 5px rgba(0,0,0,0.5)' }}
             ></div>
         </div>
@@ -56,7 +56,7 @@ const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
 };
 
 const OrganizerDashboard = () => {
-const navigate = useNavigate();
+    const navigate = useNavigate();
 
     // Extrair o utilizador do contexto global
     const { user } = useUserContext();
@@ -67,6 +67,7 @@ const navigate = useNavigate();
     const [myGames, setMyGames] = useState([]);
     const [allRegistrations, setAllRegistrations] = useState([]);
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, gameId: null });
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingGame, setEditingGame] = useState(null);
 
@@ -91,7 +92,7 @@ const navigate = useNavigate();
     const handleAction = async (regId, actionType) => {
         try {
             await axios.patch(`http://localhost:8000/api/registrations/${regId}/`, { status: actionType }, {
-                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
                 withCredentials: true
             });
             setAlertConfig({ show: true, message: actionType === 'APPROVED' ? 'Inscrição Aceite!' : 'Inscrição Rejeitada.', color: actionType === 'APPROVED' ? 'success' : 'secondary' });
@@ -104,21 +105,23 @@ const navigate = useNavigate();
         }
     };
 
-    const handleDeleteGame = async (gameId) => {
-        if (window.confirm("Tens a certeza que queres apagar este Match? Esta ação vai cancelar todos os pedidos.")) {
-            try {
-                await axios.delete(`http://localhost:8000/api/games/${gameId}/`, {}, {
-                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+    const confirmDelete = (gameId) => {
+        setDeleteModal({ isOpen: true, gameId });
+    };
+
+    const executeDelete = async () => {
+        try {
+            await axios.delete(`http://localhost:8000/api/games/${deleteModal.gameId}/`, {
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
                 withCredentials: true
             });
-                setAlertConfig({ show: true, message: 'Match apagado com sucesso.', color: 'success' });
-                setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
-                fetchMyData();
-            } catch (error) {
-                console.error("Erro do Django ao Apagar:", error.response?.data || error.message);
-                setAlertConfig({ show: true, message: 'Erro ao apagar o Match.', color: 'danger' });
-                setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
-            }
+            setAlertConfig({ show: true, message: 'Match apagado com sucesso.', color: 'success' });
+            fetchMyData();
+        } catch (error) {
+            setAlertConfig({ show: true, message: 'Erro ao apagar o Match.', color: 'danger' });
+        } finally {
+            setDeleteModal({ isOpen: false, gameId: null });
+            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
         }
     };
 
@@ -135,10 +138,10 @@ const navigate = useNavigate();
                 time: editingGame.time,
                 price: editingGame.price
             }, {
-                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
                 withCredentials: true
             });
-            
+
             setAlertConfig({ show: true, message: 'Match atualizado com sucesso!', color: 'success' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'success' }), 2000);
             setEditModalOpen(false);
@@ -158,7 +161,7 @@ const navigate = useNavigate();
 
     return (
         <div className="bg-light min-vh-100 pb-5">
-            
+
             {alertConfig.show && (
                 <Alert color={alertConfig.color} className="position-fixed top-0 start-50 translate-middle-x mt-4 shadow-lg fw-bold" style={{ zIndex: 1050, minWidth: '300px', textAlign: 'center' }}>
                     {alertConfig.message}
@@ -191,12 +194,12 @@ const navigate = useNavigate();
                                     </div>
                                     <div className="d-flex gap-2">
                                         <Button color="light" outline size="sm" className="fw-bold" onClick={() => openEditModal(game)}>Editar</Button>
-                                        <Button color="danger" size="sm" className="fw-bold" onClick={() => handleDeleteGame(game.id)}>Apagar</Button>
+                                        <Button color="danger" size="sm" className="fw-bold" onClick={() => confirmDelete(game.id)}>Apagar</Button>
                                     </div>
                                 </div>
                                 <CardBody className="bg-white">
                                     <h6 className="fw-bold mb-3 border-bottom pb-2">Pedidos de Inscrição</h6>
-                                    
+
                                     {gameRegs.length === 0 ? (
                                         <p className="text-muted small mb-0">Sem pedidos de momento.</p>
                                     ) : (
@@ -205,15 +208,15 @@ const navigate = useNavigate();
                                                 <Col xs={7} className="d-flex align-items-center gap-3 px-1">
                                                     {/* O Mini Campo (só para Escolha Livre) */}
                                                     {game.distribution_model === 'Escolha Livre' && (
-                                                        <MiniPitch 
-                                                            positionId={reg.position_id} 
-                                                            modality={game.modality} 
-                                                            titulares={game.titulares} 
-                                                            color1={game.cor_equipa1} 
-                                                            color2={game.cor_equipa2} 
+                                                        <MiniPitch
+                                                            positionId={reg.position_id}
+                                                            modality={game.modality}
+                                                            titulares={game.titulares}
+                                                            color1={game.cor_equipa1}
+                                                            color2={game.cor_equipa2}
                                                         />
                                                     )}
-                                                    
+
                                                     <div>
                                                         <div className="fw-bold fs-6">
                                                             {reg.team ? reg.team_name : reg.player_username}
@@ -252,25 +255,25 @@ const navigate = useNavigate();
                             <>
                                 <FormGroup>
                                     <Label className="fw-bold small text-muted">Localização</Label>
-                                    <Input type="text" value={editingGame.location} onChange={(e) => setEditingGame({...editingGame, location: e.target.value})} />
+                                    <Input type="text" value={editingGame.location} onChange={(e) => setEditingGame({ ...editingGame, location: e.target.value })} />
                                 </FormGroup>
                                 <Row>
                                     <Col xs={6}>
                                         <FormGroup>
                                             <Label className="fw-bold small text-muted">Data</Label>
-                                            <Input type="date" value={editingGame.date} onChange={(e) => setEditingGame({...editingGame, date: e.target.value})} />
+                                            <Input type="date" value={editingGame.date} onChange={(e) => setEditingGame({ ...editingGame, date: e.target.value })} />
                                         </FormGroup>
                                     </Col>
                                     <Col xs={6}>
                                         <FormGroup>
                                             <Label className="fw-bold small text-muted">Hora</Label>
-                                            <Input type="time" value={editingGame.time} onChange={(e) => setEditingGame({...editingGame, time: e.target.value})} />
+                                            <Input type="time" value={editingGame.time} onChange={(e) => setEditingGame({ ...editingGame, time: e.target.value })} />
                                         </FormGroup>
                                     </Col>
                                 </Row>
                                 <FormGroup>
                                     <Label className="fw-bold small text-muted">Preço Total (€)</Label>
-                                    <Input type="number" step="0.01" value={editingGame.price} onChange={(e) => setEditingGame({...editingGame, price: e.target.value})} />
+                                    <Input type="number" step="0.01" value={editingGame.price} onChange={(e) => setEditingGame({ ...editingGame, price: e.target.value })} />
                                 </FormGroup>
                             </>
                         )}
@@ -278,6 +281,17 @@ const navigate = useNavigate();
                     <ModalFooter className="border-top-0 pt-0">
                         <Button color="light" onClick={() => setEditModalOpen(false)} className="fw-bold">Cancelar</Button>
                         <Button color="success" onClick={handleUpdateGame} className="fw-bold">Guardar Alterações</Button>
+                    </ModalFooter>
+                </Modal>
+
+                <Modal isOpen={deleteModal.isOpen} toggle={() => setDeleteModal({ isOpen: false, gameId: null })} centered>
+                    <ModalHeader className="border-0 fw-bold">Apagar Match</ModalHeader>
+                    <ModalBody>
+                        Tens a certeza que queres eliminar este jogo? Esta ação é irreversível e irá cancelar todas as inscrições associadas.
+                    </ModalBody>
+                    <ModalFooter className="border-0">
+                        <Button color="light" onClick={() => setDeleteModal({ isOpen: false, gameId: null })}>Cancelar</Button>
+                        <Button color="danger" onClick={executeDelete} className="fw-bold">Confirmar Eliminação</Button>
                     </ModalFooter>
                 </Modal>
 

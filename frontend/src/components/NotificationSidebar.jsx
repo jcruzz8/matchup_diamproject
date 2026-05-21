@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Button } from 'reactstrap';
 import { useUserContext } from '../context/UserProvider.jsx';
@@ -23,11 +23,18 @@ const NotificationSidebar = () => {
         notificationsOpen,
         toggleNotifications,
         notifications,
-        markAllNotificationsRead,
+        markAllRead,
         refreshNotifications,
         showAlert,
     } = useUserContext();
     const [processingId, setProcessingId] = useState(null);
+
+    // Efeito para marcar todas como lidas assim que a sidebar abre
+    useEffect(() => {
+        if (notificationsOpen) {
+            markAllRead();
+        }
+    }, [notificationsOpen]);
 
     if (!notificationsOpen) {
         return null;
@@ -42,6 +49,13 @@ const NotificationSidebar = () => {
         return notification.category || 'Atualização';
     };
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        // Verifica se a data é válida
+        return !isNaN(date) ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    };
+
     const handleAction = async (notification, action) => {
         if (!notification.reference_type) return;
         setProcessingId(notification.id);
@@ -52,14 +66,14 @@ const NotificationSidebar = () => {
                 { action },
                 {
                     withCredentials: true,
-                    headers: { 'X-CSRFToken': csrftoken }
+                    headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' }
                 }
             );
             showAlert(res.data.message, action === 'accept' ? 'success' : 'danger');
             await refreshNotifications();
         } catch (error) {
-            console.error('Erro ao processar notificação:', error);
-            showAlert(error.response?.data?.error || 'Erro ao processar a notificação.', 'danger');
+            console.error('Erro:', error);
+            showAlert(error.response?.data?.error || 'Erro ao processar.', 'danger');
         } finally {
             setProcessingId(null);
         }
@@ -74,19 +88,13 @@ const NotificationSidebar = () => {
             />
             <div
                 className="position-fixed top-0 start-0 h-100 bg-white shadow-lg border-end overflow-hidden"
-                style={{ width: '340px', zIndex: 1100 }}
+                style={{ width: '450px', zIndex: 1100 }}
             >
                 <div className="d-flex align-items-center justify-content-between border-bottom py-3 px-3">
                     <div>
-                        <h6 className="mb-0 fw-bold">Notificações</h6>
-                        <small className="text-muted">{total} totais · {unreadCount} não lidas</small>
+                        <h6 className="mb-0 fw-bold text-danger">Notificações</h6>
                     </div>
                     <div className="d-flex gap-2 align-items-center">
-                        {total > 0 && (
-                            <Button color="link" size="sm" className="text-decoration-none p-0" onClick={markAllNotificationsRead}>
-                                Marcar todas
-                            </Button>
-                        )}
                         <Button color="link" size="sm" className="text-dark p-0" onClick={toggleNotifications}>
                             Fechar
                         </Button>
@@ -106,59 +114,44 @@ const NotificationSidebar = () => {
                                 <div className="d-flex justify-content-between align-items-start mb-2">
                                     <div>
                                         <div className="fw-bold text-dark">{getNotificationTitle(notification)}</div>
-                                        <small className="text-muted">{notification.type === 'danger' ? 'Urgente' : 'Nova'}</small>
+                                        {/* O "NOVA" agora só aparece se não estiver lida */}
+                                        {!notification.read && <small className="text-danger fw-bold" style={{ fontSize: '10px' }}>NOVA</small>}
                                     </div>
                                     <div className="text-end">
-                                        <small className="text-muted d-block">{new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-                                        {!notification.read && <span className="badge bg-danger mt-1">Novo</span>}
+                                        <small className="text-muted d-block">{formatDate(notification.createdAt)}</small>
                                     </div>
                                 </div>
 
-                                {['FOLLOW_REQUEST', 'TEAM_JOIN_REQUEST'].includes(notification.reference_type) ? (
-                                    <div className="d-flex align-items-center gap-3 mb-3">
-                                        {notification.actor_photo ? (
-                                            <img
-                                                src={notification.actor_photo}
-                                                alt={notification.actor_username}
-                                                className="rounded-circle"
-                                                style={{ width: '48px', height: '48px', objectFit: 'cover' }}
-                                            />
-                                        ) : (
-                                            <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center" style={{ width: '48px', height: '48px' }}>
-                                                {notification.actor_username ? notification.actor_username.charAt(0).toUpperCase() : '?'}
-                                            </div>
-                                        )}
-                                        <div className="flex-grow-1">
-                                            <div className="fw-bold text-dark">{notification.actor_username || 'Utilizador'}</div>
-                                            <div className="text-muted" style={{ fontSize: '13px' }}>{notification.message}</div>
+                                {/* Bloco do Avatar e Mensagem */}
+                                <div className="d-flex align-items-center gap-3 mb-3">
+                                    {notification.actor_photo ? (
+                                        <img src={notification.actor_photo} alt={notification.actor_username} className="rounded-circle" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center" style={{ width: '48px', height: '48px' }}>
+                                            {notification.actor_username?.charAt(0).toUpperCase() || '?'}
                                         </div>
+                                    )}
+                                    <div className="flex-grow-1">
+                                        <div className="fw-bold text-dark">{notification.actor_username || 'Utilizador'}</div>
+                                        <div className="text-muted" style={{ fontSize: '13px' }}>{notification.message}</div>
                                     </div>
-                                ) : (
-                                    <p className="mb-3 text-dark" style={{ lineHeight: 1.5 }}>{notification.message}</p>
-                                )}
+                                </div>
 
-                                {['FOLLOW_REQUEST', 'TEAM_JOIN_REQUEST'].includes(notification.reference_type) && (
+                                {/* BOTÕES: Apenas aparecem se for pedido E NÃO estiver processado */}
+                                {['FOLLOW_REQUEST', 'TEAM_JOIN_REQUEST'].includes(notification.reference_type) && !notification.is_processed ? (
                                     <div className="d-flex gap-2">
-                                        <Button
-                                            color="success"
-                                            size="sm"
-                                            className="rounded-pill flex-fill"
+                                        <Button color="success" size="sm" className="rounded-pill flex-fill"
                                             disabled={processingId === notification.id}
-                                            onClick={() => handleAction(notification, 'accept')}
-                                        >
-                                            Aceitar
+                                            onClick={() => handleAction(notification, 'accept')}>
+                                            {processingId === notification.id ? "..." : "Aceitar"}
                                         </Button>
-                                        <Button
-                                            color="danger"
-                                            size="sm"
-                                            className="rounded-pill flex-fill"
+                                        <Button color="danger" size="sm" className="rounded-pill flex-fill"
                                             disabled={processingId === notification.id}
-                                            onClick={() => handleAction(notification, 'reject')}
-                                        >
-                                            Recusar
+                                            onClick={() => handleAction(notification, 'reject')}>
+                                            {processingId === notification.id ? "..." : "Recusar"}
                                         </Button>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         ))
                     )}

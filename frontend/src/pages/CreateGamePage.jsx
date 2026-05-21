@@ -1,13 +1,13 @@
-import { useState} from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Row, Col, Card, CardBody, Form, FormGroup, Label, Input, Button, Alert } from 'reactstrap';
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
-import {useUserContext} from "../context/UserProvider.jsx";
+import { useUserContext } from "../context/UserProvider.jsx";
 
 const CreateGamePage = () => {
-const navigate = useNavigate();
+    const navigate = useNavigate();
 
     // Extrair o utilizador do contexto
     const { user } = useUserContext();
@@ -30,11 +30,13 @@ const navigate = useNavigate();
         distribution_model: 'Escolha Livre'
     });
 
+    const hoje = new Date().toISOString().split('T')[0];
+
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
+
         // Se mudarmos a modalidade, ajustamos logo os titulares por defeito para fazer sentido
         if (name === 'modality') {
             const defaultTitulares = value === 'Basketball' ? '5' : '5';
@@ -58,11 +60,16 @@ const navigate = useNavigate();
             return;
         }
         try {
-            await axios.post('http://localhost:8000/api/games/', {
+            // Criar cópia e converter tipos antes de enviar
+            const payload = {
                 ...formData,
-                organizer: user.player_id
-            }, {
-                headers: { 'X-CSRFToken':getCSRFToken() },
+                organizer: user.player_id,
+                titulares: parseInt(formData.titulares),
+                suplentes: parseInt(formData.suplentes),
+                price: parseFloat(formData.price || 0)
+            };
+            await axios.post('http://localhost:8000/api/games/', payload, {
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
                 withCredentials: true
             });
             setAlertConfig({ show: true, message: 'Jogo criado com sucesso! A preparar o campo...', color: 'success' });
@@ -76,15 +83,14 @@ const navigate = useNavigate();
     };
 
     const getCSRFToken = () => {
-    return document.cookie.split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
     }
 
     return (
         <div className="bg-light min-vh-100 pb-5">
-
-            <TopNavBarSimple/>
+            <TopNavBarSimple />
 
             {alertConfig.show && (
                 <Alert color={alertConfig.color} className="position-fixed top-0 start-50 translate-middle-x mt-4 shadow-lg fw-bold" style={{ zIndex: 1050, minWidth: '300px', textAlign: 'center' }}>
@@ -97,8 +103,16 @@ const navigate = useNavigate();
                     <Col md={8} lg={6}>
                         <Card className="shadow-sm border-0 rounded-4 mb-5">
                             <CardBody className="p-4 p-md-5">
-                                <h3 className="fw-bold text-center mb-4 text-dark">Agendar Novo Match</h3>
-                                
+                                <div className="d-flex align-items-center justify-content-between gap-3 mb-4" style={{ minHeight: '42px' }}>
+                                    <Button color="link" className="text-dark p-0" onClick={() => navigate(-1)}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                            <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
+                                        </svg>
+                                    </Button>
+                                    <h3 className="fw-bold m-0 text-dark flex-grow-1 text-center">Agendar Novo Match</h3>
+                                    <div style={{ width: '36px' }} />
+                                </div>
+
                                 <Form onSubmit={handleSubmit}>
                                     <FormGroup className="mb-3">
                                         <Label className="fw-bold">Modalidade</Label>
@@ -117,7 +131,7 @@ const navigate = useNavigate();
                                         <Col xs={6}>
                                             <FormGroup className="mb-3">
                                                 <Label className="fw-bold">Data</Label>
-                                                <Input type="date" name="date" value={formData.date} onChange={handleChange} required />
+                                                <Input type="date" name="date" min={hoje} value={formData.date} onChange={handleChange} />
                                             </FormGroup>
                                         </Col>
                                         <Col xs={6}>
@@ -132,13 +146,13 @@ const navigate = useNavigate();
                                         <Col xs={6}>
                                             <FormGroup className="mb-3">
                                                 <Label className="fw-bold">Data limite de inscrição</Label>
-                                                <Input type="date" name="registration_deadline" value={formData.registration_deadline} onChange={handleChange} required />
+                                                <Input type="date" name="registration_deadline" min={hoje} max={formData.date} value={formData.registration_deadline} onChange={handleChange} />
                                             </FormGroup>
                                         </Col>
                                         <Col xs={6}>
                                             <FormGroup className="mb-3">
                                                 <Label className="fw-bold">Data limite de pagamento</Label>
-                                                <Input type="date" name="payment_deadline" value={formData.payment_deadline} onChange={handleChange} required />
+                                                <Input type="date" name="payment_deadline" min={formData.registration_deadline} max={formData.date} value={formData.payment_deadline} onChange={handleChange} required />
                                             </FormGroup>
                                         </Col>
                                     </Row>

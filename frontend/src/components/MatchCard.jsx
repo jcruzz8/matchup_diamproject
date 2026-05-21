@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { Card, CardBody, Row, Col, Button, Modal, ModalHeader, ModalBody, ModalFooter, ListGroup, ListGroupItem, Alert } from 'reactstrap';
 import axios from 'axios';
-import {useUserContext} from "../context/UserProvider.jsx";
+import { useUserContext } from "../context/UserProvider.jsx";
 
 const MatchCard = ({ game, userRegistrationStatus }) => {
-    // Extrair o utilizador do contexto
     const { user } = useUserContext();
-
-    // Garantir o ID numérico seguro
     const userId = user?.player_id ? Number(user.player_id) : null;
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
@@ -17,12 +14,20 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [targetPosition, setTargetPosition] = useState('');
 
+    const isPending = game.registrations?.some(reg => reg.player === userId && reg.status === 'PENDING');
+    const isApproved = userRegistrationStatus === 'APPROVED';
+
     const toggleModal = () => {
         setModalOpen(!modalOpen);
         setSelectedTeam(null);
     };
 
-    // Abre o Modal e vai buscar as equipas ao Django
+    const getCSRFToken = () => {
+        return document.cookie.split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+    }
+
     const openTeamModal = async (position) => {
         if (!userId) {
             setAlertConfig({ show: true, message: 'Precisas de iniciar sessão para inscrever a tua equipa!', color: 'danger' });
@@ -37,36 +42,39 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             setMyTeams(response.data);
             setModalOpen(true);
         } catch (error) {
-            console.error("Erro ao buscar equipas:", error);
             setAlertConfig({ show: true, message: 'Não foi possível carregar as tuas equipas.', color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
 
-    // Envia o pedido de inscrição (Fica Pendente)
     const handleTeamRegistration = async () => {
         if (!selectedTeam || !userId) return;
+
+        const registeredTeams = Object.values(game.occupied_data?.teams || {});
+        if (registeredTeams.includes(selectedTeam.name)) {
+            setAlertConfig({ show: true, message: 'Esta Equipa já está inscrita!', color: 'danger' });
+            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
+            return;
+        }
 
         try {
             await axios.post('http://localhost:8000/api/registrations/', {
                 game: game.id, player: userId, team: selectedTeam.id, position_id: targetPosition, status: 'PENDING'
             }, {
-                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'multipart/form-data' },
                 withCredentials: true
             });
 
-            setModalOpen(false); // Fecha o modal
+            setModalOpen(false);
             setAlertConfig({ show: true, message: 'Pedido da equipa enviado com sucesso!', color: 'success' });
             setTimeout(() => window.location.reload(), 2000);
-
         } catch (error) {
-            console.error("Erro ao inscrever equipa:", error);
-            setAlertConfig({ show: true, message: 'Erro ao inscrever a equipa. Já enviaram um pedido para este jogo?', color: 'danger' });
+            const message = error?.response?.data?.detail || error?.response?.data?.non_field_errors?.[0] || 'Erro ao inscrever a equipa.';
+            setAlertConfig({ show: true, message, color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
 
-    // Função para colocar os jogadores nos campos
     const getPosicoes = (modalidade, titulares) => {
         const num = parseInt(titulares);
         if (modalidade === 'Basketball') {
@@ -124,8 +132,8 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             if (game.distribution_model === 'Auto-Balanceamento') {
                 await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: 'auto', status: 'PENDING'
-                    }, {
-                    headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                }, {
+                    headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'multipart/form-data' },
                     withCredentials: true
                 });
 
@@ -136,8 +144,8 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                 if (!posicaoSelecionada) return;
                 await axios.post('http://localhost:8000/api/registrations/', {
                     game: game.id, player: userId, position_id: posicaoSelecionada.id, status: 'PENDING'
-                    }, {
-                    headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+                }, {
+                    headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'multipart/form-data' },
                     withCredentials: true
                 });
 
@@ -145,17 +153,56 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                 setTimeout(() => window.location.reload(), 2000);
             }
         } catch (error) {
-            console.error("Erro ao inscrever:", error);
             setAlertConfig({ show: true, message: 'Ocorreu um erro ao tentar inscrever. Tenta novamente.', color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
         }
     };
 
-    const getCSRFToken = () => {
-        return document.cookie.split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];
-    }
+    // --- FUNÇÕES AUXILIARES DE ESTADO DAS EQUIPAS ---
+    // Verifica se uma equipa específica está confirmada pelo organizador
+    const isTeamConfirmed = (teamPos) => game.occupied_data?.positions?.includes(teamPos);
+
+    // Verifica se O UTILIZADOR fez um pedido para uma equipa ESPECÍFICA e qual o estado
+    // Assumindo que se ele fez um pedido e não está em 'positions' (que indica aprovação), está pendente.
+    // O backend terá de devolver no ocupied_data os players pendentes ou usamos a prop userRegistrationStatus com cuidado.
+
+    const getTeamButtonProps = (teamPos) => {
+        // Verifica se a posição já foi aceite pelo organizador
+        const confirmed = game.occupied_data?.positions?.includes(teamPos);
+
+        // Verifica se O UTILIZADOR tem algum pedido PENDENTE para esta posição específica
+        // Assumimos que o game recebe as suas inscrições (game.registrations)
+        const isMyPending = game.registrations?.some(reg =>
+            reg.player === userId &&
+            reg.position_id === teamPos &&
+            reg.status === 'PENDING'
+        );
+
+        if (confirmed) {
+            return {
+                color: "success",
+                outline: false,
+                disabled: true,
+                content: <><span className="small fw-normal">Ocupado por:</span><br />{game.occupied_data.teams[teamPos]}</>
+            };
+        }
+
+        if (isMyPending) {
+            return {
+                color: "secondary",
+                outline: false,
+                disabled: true,
+                content: <><span className="fw-bold">Pedido Enviado</span><br /><small>Aguarda aprovação</small></>
+            };
+        }
+
+        return {
+            color: "dark",
+            outline: true,
+            disabled: false,
+            content: <><span className="fw-bold">Inscrever a</span><br />Minha Equipa</>
+        };
+    };
 
     return (
         <>
@@ -201,14 +248,12 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                             <div className="d-flex justify-content-between align-items-center mt-2">
                                 <span className="fw-bold fs-5">Vagas Restantes: <span className="text-danger border-bottom border-danger pb-1 px-2">{game.vagas}</span></span>
                                 <Button
-                                    color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : "danger"}
+                                    color={isApproved ? "success" : isPending ? "secondary" : "danger"}
                                     className="px-4 py-2 fw-bold fs-5 shadow-sm rounded-3"
                                     onClick={handleInscrever}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.players?.includes(userId)}
+                                    disabled={isApproved || isPending} // Bloqueia se estiver aprovado OU pendente
                                 >
-                                    {userRegistrationStatus === 'APPROVED' ? 'CONFIRMADO' :
-                                        userRegistrationStatus === 'PENDING' ? 'PENDENTE' :
-                                            game.occupied_data?.players?.includes(userId) ? 'Já Inscrito' : 'Inscrever'}
+                                    {isApproved ? 'CONFIRMADO' : isPending ? 'PENDENTE' : 'Inscrever'}
                                 </Button>
                             </div>
                         </>
@@ -220,40 +265,26 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                             <Col xs={6} className="border-end border-dark text-center">
                                 <h6 className="fw-bold mb-4">Equipa 1 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa1, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
                                 <Button
-                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa1') && !game.occupied_data?.players?.includes(userId)}
-                                    color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : game.occupied_data?.positions?.includes('equipa1') ? "success" : "dark"}
+                                    outline={getTeamButtonProps('equipa1').outline}
+                                    color={getTeamButtonProps('equipa1').color}
                                     className="w-100 fw-bold border-2 rounded-3 py-2"
                                     onClick={() => openTeamModal('equipa1')}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa1') || game.occupied_data?.players?.includes(userId)}
+                                    disabled={getTeamButtonProps('equipa1').disabled}
                                 >
-                                    {userRegistrationStatus === 'APPROVED' ? <><span className="fw-bold fs-5">CONFIRMADO</span></> :
-                                        userRegistrationStatus === 'PENDING' ? <><span className="fw-bold fs-5">PENDENTE</span></> :
-                                            game.occupied_data?.positions?.includes('equipa1')
-                                                ? <><span className="small fw-normal">Ocupado por:</span><br />{game.occupied_data.teams['equipa1']}</>
-                                                : game.occupied_data?.players?.includes(userId)
-                                                    ? <><span className="fw-bold">Pedido Enviado</span><br /><small>Aguarda aprovação</small></>
-                                                    : <><span className="fw-bold">Inscrever a</span><br />Minha Equipa</>
-                                    }
+                                    {getTeamButtonProps('equipa1').content}
                                 </Button>
                             </Col>
 
                             <Col xs={6} className="text-center">
                                 <h6 className="fw-bold mb-4">Equipa 2 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa2, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
                                 <Button
-                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa2') && !game.occupied_data?.players?.includes(userId)}
-                                    color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : game.occupied_data?.positions?.includes('equipa2') ? "success" : "dark"}
+                                    outline={getTeamButtonProps('equipa2').outline}
+                                    color={getTeamButtonProps('equipa2').color}
                                     className="w-100 fw-bold border-2 rounded-3 py-2"
                                     onClick={() => openTeamModal('equipa2')}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa2') || game.occupied_data?.players?.includes(userId)}
+                                    disabled={getTeamButtonProps('equipa2').disabled}
                                 >
-                                    {userRegistrationStatus === 'APPROVED' ? <><span className="fw-bold fs-5">CONFIRMADO</span></> :
-                                        userRegistrationStatus === 'PENDING' ? <><span className="fw-bold fs-5">PENDENTE</span></> :
-                                            game.occupied_data?.positions?.includes('equipa2')
-                                                ? <><span className="small fw-normal">Ocupado por:</span><br />{game.occupied_data.teams['equipa2']}</>
-                                                : game.occupied_data?.players?.includes(userId)
-                                                    ? <><span className="fw-bold">Pedido Enviado</span><br /><small>Aguarda aprovação</small></>
-                                                    : <><span className="fw-bold">Inscrever a</span><br />Minha Equipa</>
-                                    }
+                                    {getTeamButtonProps('equipa2').content}
                                 </Button>
                             </Col>
                         </Row>
@@ -300,187 +331,358 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                     </Modal>
 
                     {/* ESCOLHA LIVRE */}
+
                     {game.distribution_model === 'Escolha Livre' && (
+
                         <>
+
                             <Row className="gx-3 mb-4">
+
                                 {/* ----- EQUIPA 1 ----- */}
+
                                 <Col xs={6} className="border-end border-dark text-center">
+
                                     <h6 className="fw-bold mb-3">Equipa 1 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa1, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
+
+
 
                                     <div className="mx-auto position-relative border border-2 bg-light shadow-sm mb-2 overflow-hidden" style={{ width: '100%', maxWidth: '140px', height: '180px', borderColor: game.cor_equipa1, borderRadius: '4px' }}>
 
+
+
                                         {game.modality === 'Basketball' ? (
+
                                             <>
+
                                                 <div className="position-absolute top-50 start-0 w-100 border-top border-2" style={{ borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-50 start-50 translate-middle border border-2 rounded-circle" style={{ width: '30px', height: '30px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '40px', height: '35px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '40px', height: '35px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '100px', height: '60px', borderColor: game.cor_equipa1, opacity: 0.4, borderBottomLeftRadius: '50px', borderBottomRightRadius: '50px' }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '100px', height: '60px', borderColor: game.cor_equipa1, opacity: 0.4, borderTopLeftRadius: '50px', borderTopRightRadius: '50px' }}></div>
+
                                             </>
+
                                         ) : (
+
                                             <>
+
                                                 <div className="position-absolute top-50 start-0 w-100 border-top border-2" style={{ borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-50 start-50 translate-middle border border-2 rounded-circle" style={{ width: '40px', height: '40px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '50px', height: '20px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '50px', height: '20px', borderColor: game.cor_equipa1, opacity: 0.4 }}></div>
+
                                             </>
+
                                         )}
 
+
+
                                         {posicoesCampo.map((pos, index) => {
+
                                             const posId = `eq1-campo-${index}`;
+
                                             const isOccupied = game.occupied_data?.positions?.includes(posId);
+
                                             const isSelected = posicaoSelecionada?.id === posId;
 
+
+
                                             return (
+
                                                 <div
+
                                                     key={posId}
+
                                                     onClick={() => !isOccupied && setPosicaoSelecionada({ id: posId, equipa: 1, tipo: 'campo', index })}
+
                                                     className={`position-absolute translate-middle rounded-circle border border-2 transition-all ${isOccupied ? '' : 'cursor-pointer'}`}
+
                                                     style={{
+
                                                         top: pos.top, left: pos.left, width: '20px', height: '20px',
+
                                                         backgroundColor: isOccupied ? '#6c757d' : (isSelected ? game.cor_equipa1 : '#fff'),
+
                                                         borderColor: isOccupied ? '#495057' : game.cor_equipa1,
+
                                                         transform: isSelected ? 'translate(-50%, -50%) scale(1.3)' : 'translate(-50%, -50%)',
+
                                                         boxShadow: isSelected ? '0 0 8px rgba(0,0,0,0.5)' : 'none',
+
                                                         cursor: isOccupied ? 'not-allowed' : 'pointer'
+
                                                     }}
+
                                                     title={isOccupied ? "Posição Ocupada" : "Livre"}
+
                                                 >
+
                                                     {isOccupied && <span className="position-absolute top-50 start-50 translate-middle text-white fw-bold" style={{ fontSize: '10px' }}>✕</span>}
+
                                                 </div>
+
                                             )
+
                                         })}
+
                                     </div>
 
+
+
                                     {/* BANCO (Caso haja suplentes) */}
+
                                     {posicoesBanco.length > 0 && (
+
                                         <div className="mx-auto border border-2 rounded-2 p-1 bg-light mt-1" style={{ width: '100%', maxWidth: '140px', borderColor: game.cor_equipa1 }}>
+
                                             <div className="small fw-bold mb-1 text-muted" style={{ fontSize: '10px' }}>BANCO</div>
+
                                             <div className="d-flex justify-content-center gap-2 flex-wrap">
+
                                                 {posicoesBanco.map((_, index) => {
+
                                                     const posId = `eq1-banco-${index}`;
+
                                                     const isOccupied = game.occupied_data?.positions?.includes(posId);
+
                                                     const isSelected = posicaoSelecionada?.id === posId;
+
                                                     return (
+
                                                         <div
+
                                                             key={posId}
+
                                                             onClick={() => !isOccupied && setPosicaoSelecionada({ id: posId, equipa: 1, tipo: 'banco', index })}
+
                                                             className="rounded-circle border border-2 transition-all"
+
                                                             style={{
+
                                                                 width: '18px', height: '18px',
+
                                                                 backgroundColor: isOccupied ? '#6c757d' : (isSelected ? game.cor_equipa1 : '#fff'),
+
                                                                 borderColor: isOccupied ? '#495057' : game.cor_equipa1,
+
                                                                 transform: isSelected ? 'scale(1.3)' : 'scale(1)',
+
                                                                 cursor: isOccupied ? 'not-allowed' : 'pointer'
+
                                                             }}
+
                                                         >
+
                                                             {isOccupied && <span className="d-block text-white fw-bold text-center" style={{ fontSize: '9px', lineHeight: '14px' }}>✕</span>}
+
                                                         </div>
+
                                                     )
+
                                                 })}
+
                                             </div>
+
                                         </div>
+
                                     )}
+
                                 </Col>
 
+
+
                                 {/* EQUIPA 2 (Invertida) */}
+
                                 <Col xs={6} className="text-center">
+
                                     <h6 className="fw-bold mb-3">Equipa 2 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa2, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
+
+
 
                                     <div className="mx-auto position-relative border border-2 bg-light shadow-sm mb-2 overflow-hidden" style={{ width: '100%', maxWidth: '140px', height: '180px', borderColor: game.cor_equipa2, borderRadius: '4px' }}>
 
+
+
                                         {game.modality === 'Basketball' ? (
+
                                             <>
+
                                                 <div className="position-absolute top-50 start-0 w-100 border-top border-2" style={{ borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-50 start-50 translate-middle border border-2 rounded-circle" style={{ width: '30px', height: '30px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '40px', height: '35px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '40px', height: '35px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '100px', height: '60px', borderColor: game.cor_equipa2, opacity: 0.4, borderBottomLeftRadius: '50px', borderBottomRightRadius: '50px' }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '100px', height: '60px', borderColor: game.cor_equipa2, opacity: 0.4, borderTopLeftRadius: '50px', borderTopRightRadius: '50px' }}></div>
+
                                             </>
+
                                         ) : (
+
                                             <>
+
                                                 <div className="position-absolute top-50 start-0 w-100 border-top border-2" style={{ borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-50 start-50 translate-middle border border-2 rounded-circle" style={{ width: '40px', height: '40px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute top-0 start-50 translate-middle-x border border-top-0 border-2" style={{ width: '50px', height: '20px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x border border-bottom-0 border-2" style={{ width: '50px', height: '20px', borderColor: game.cor_equipa2, opacity: 0.4 }}></div>
+
                                             </>
+
                                         )}
 
+
+
                                         {posicoesCampo.map((pos, index) => {
+
                                             const posId = `eq2-campo-${index}`;
+
                                             const isOccupied = game.occupied_data?.positions?.includes(posId);
+
                                             const isSelected = posicaoSelecionada?.id === posId;
+
+
 
                                             const topInvertido = `${100 - parseInt(pos.top)}%`;
 
+
+
                                             return (
+
                                                 <div
+
                                                     key={posId}
+
                                                     onClick={() => !isOccupied && setPosicaoSelecionada({ id: posId, equipa: 2, tipo: 'campo', index })}
+
                                                     className={`position-absolute translate-middle rounded-circle border border-2 transition-all ${isOccupied ? '' : 'cursor-pointer'}`}
+
                                                     style={{
+
                                                         top: topInvertido, left: pos.left, width: '20px', height: '20px',
+
                                                         backgroundColor: isOccupied ? '#6c757d' : (isSelected ? game.cor_equipa2 : '#fff'),
+
                                                         borderColor: isOccupied ? '#495057' : game.cor_equipa2,
+
                                                         transform: isSelected ? 'translate(-50%, -50%) scale(1.3)' : 'translate(-50%, -50%)',
+
                                                         boxShadow: isSelected ? '0 0 8px rgba(0,0,0,0.5)' : 'none',
+
                                                         cursor: isOccupied ? 'not-allowed' : 'pointer'
+
                                                     }}
+
                                                 >
+
                                                     {isOccupied && <span className="position-absolute top-50 start-50 translate-middle text-white fw-bold" style={{ fontSize: '10px' }}>✕</span>}
+
                                                 </div>
+
                                             )
+
                                         })}
+
                                     </div>
 
+
+
                                     {/* BANCO EQUIPA 2 */}
+
                                     {posicoesBanco.length > 0 && (
+
                                         <div className="mx-auto border border-2 rounded-2 p-1 bg-light mt-1" style={{ width: '100%', maxWidth: '140px', borderColor: game.cor_equipa2 }}>
+
                                             <div className="small fw-bold mb-1 text-muted" style={{ fontSize: '10px' }}>BANCO</div>
+
                                             <div className="d-flex justify-content-center gap-2 flex-wrap">
+
                                                 {posicoesBanco.map((_, index) => {
+
                                                     const posId = `eq2-banco-${index}`;
+
                                                     const isOccupied = game.occupied_data?.positions?.includes(posId);
+
                                                     const isSelected = posicaoSelecionada?.id === posId;
+
                                                     return (
+
                                                         <div
+
                                                             key={posId}
+
                                                             onClick={() => !isOccupied && setPosicaoSelecionada({ id: posId, equipa: 2, tipo: 'banco', index })}
+
                                                             className="rounded-circle border border-2 transition-all"
+
                                                             style={{
+
                                                                 width: '18px', height: '18px',
+
                                                                 backgroundColor: isOccupied ? '#6c757d' : (isSelected ? game.cor_equipa2 : '#fff'),
+
                                                                 borderColor: isOccupied ? '#495057' : game.cor_equipa2,
+
                                                                 transform: isSelected ? 'scale(1.3)' : 'scale(1)',
+
                                                                 cursor: isOccupied ? 'not-allowed' : 'pointer'
+
                                                             }}
+
                                                         >
+
                                                             {isOccupied && <span className="d-block text-white fw-bold text-center" style={{ fontSize: '9px', lineHeight: '14px' }}>✕</span>}
+
                                                         </div>
+
                                                     )
+
                                                 })}
+
                                             </div>
+
                                         </div>
+
                                     )}
+
                                 </Col>
+
                             </Row>
 
+
+
                             <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+
                                 <span className="fw-bold fs-5">Vagas: <span className="text-danger border-bottom border-danger pb-1 px-2">{game.vagas}</span></span>
+
                                 <Button
-                                    color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : "danger"}
+                                    color={isApproved ? "success" : isPending ? "secondary" : "danger"}
                                     className="w-100 fw-bold py-2 fs-5 rounded-3"
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || !posicaoSelecionada}
+                                    disabled={isApproved || isPending || !posicaoSelecionada}
                                     onClick={handleInscrever}
                                 >
-                                    {userRegistrationStatus === 'APPROVED' ? 'CONFIRMADO' :
-                                        userRegistrationStatus === 'PENDING' ? 'PENDENTE' :
-                                            'Confirmar Lugar'}
+                                    {isApproved ? 'CONFIRMADO' : isPending ? 'PENDENTE' : 'Confirmar Lugar'}
                                 </Button>
+
                             </div>
+
                         </>
+
                     )}
                 </CardBody>
             </Card>

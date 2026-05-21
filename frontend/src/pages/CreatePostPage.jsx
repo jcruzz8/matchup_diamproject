@@ -96,23 +96,23 @@ const CreatePostPage = () => {
     };
 
     return (
-        <div className="bg-light min-vh-100 pb-5" style={{ paddingTop: '56px' }}>
-            <div className="fixed-top w-100" style={{ zIndex: 1050 }}>
-                <TopNavBarSimple />
-                <AppAlert {...notification} toggle={() => setNotification({...notification, isOpen: false})} />
-            </div>
-
-            <div className="bg-white border-bottom shadow-sm px-3 py-3 d-flex align-items-center sticky-top z-3" style={{ top: '56px' }}>
-                <Button color="link" className="text-dark p-0 me-3" onClick={() => navigate(-1)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
-                    </svg>
-                </Button>
-                <h5 className="m-0 fw-bold flex-grow-1 text-center me-4">Nova Publicação</h5>
-            </div>
+        <div className="bg-light min-vh-100 pb-5">
+            <TopNavBarSimple />
+            <AppAlert {...notification} toggle={() => setNotification({...notification, isOpen: false})} />
 
             <Container className="pt-4 pb-5 mb-5">
                 <div className="bg-white rounded-4 shadow-sm p-4 mx-auto" style={{ maxWidth: '600px' }}>
+                    <div className="d-flex align-items-center justify-content-between gap-3 mb-4" style={{ minHeight: '42px' }}>
+                        <Button color="link" className="text-dark p-0" onClick={() => navigate(-1)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                            </svg>
+                        </Button>
+                        <div className="flex-grow-1 text-center">
+                            <h5 className="m-0 fw-bold">Nova Publicação</h5>
+                        </div>
+                        <div style={{ width: '36px' }} />
+                    </div>
                     <Form onSubmit={handleSubmit}>
                         <div className="mb-4">
                             <Label className="fw-bold text-dark mb-2">Fotografia do Highlight *</Label>

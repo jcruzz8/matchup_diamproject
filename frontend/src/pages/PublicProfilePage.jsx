@@ -27,17 +27,17 @@ function getCookie(name) {
 const PublicProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useUserContext();
+    const { user, followingList, refreshFollowing } = useUserContext();
     const myUserId = Number(user?.player_id);
 
     const [profile, setProfile] = useState(null);
     const [userTeams, setUserTeams] = useState([]);
     const [userPhotos, setUserPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Controlo de Relação e UI
     const [followStatus, setFollowStatus] = useState('NONE'); // NONE, PENDING, FOLLOWING
-    const [activeTab, setActiveTab] = useState('photos'); 
+    const [activeTab, setActiveTab] = useState('photos');
     const [selectedModality, setSelectedModality] = useState('Geral');
 
     // Notificações
@@ -79,7 +79,7 @@ const PublicProfilePage = () => {
 
                 // 3. Carregar Equipas
                 const resTeams = await axios.get(`http://localhost:8000/api/teams/`);
-                const asEquipasDele = resTeams.data.filter(t => 
+                const asEquipasDele = resTeams.data.filter(t =>
                     t.captain == id || (t.members && t.members.includes(Number(id)))
                 );
                 setUserTeams(asEquipasDele);
@@ -106,35 +106,20 @@ const PublicProfilePage = () => {
     const calculateAge = (dob) => {
         if (!dob) return '';
         const diffMs = Date.now() - new Date(dob).getTime();
-        const ageDt = new Date(diffMs); 
+        const ageDt = new Date(diffMs);
         return Math.abs(ageDt.getUTCFullYear() - 1970);
     };
 
     const handleFollowAction = async () => {
         try {
-            const csrftoken = getCookie('csrftoken');
             const res = await axios.post(`http://localhost:8000/api/players/${id}/follow/`, {}, {
                 withCredentials: true,
-                headers: { 'X-CSRFToken': csrftoken }
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
             });
-
-            // Atualiza o estado (Pode ser PENDING ou FOLLOWING)
-            setFollowStatus(res.data.status);
-            showNotification(res.data.message, "success");
-
-            // Atualiza os contadores visualmente
-            if (res.data.status === 'FOLLOWING') {
-                setProfile(prev => ({ ...prev, followers_count: (prev.followers_count || 0) + 1 }));
-            } else if (res.data.status === 'NONE') {
-                setProfile(prev => ({ ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) }));
-            }
+            await refreshFollowing(); // Sincroniza todos os botões da app
+            setFollowStatus(res.data.status); // Mantém o status para lógica de UI
         } catch (error) {
-            console.error("Erro no Follow:", error);
-            if (error.response?.data?.error) {
-                showNotification(error.response.data.error, "danger");
-            } else {
-                showNotification("Não foi possível processar a ação.", "danger");
-            }
+            showNotification("Erro ao processar ação.", "danger");
         }
     };
 
@@ -198,14 +183,14 @@ const PublicProfilePage = () => {
             <div className="fixed-top w-100" style={{ zIndex: 1050 }}>
                 <TopNavBarSimple />
                 {/* ALERTA INCORPORADO AQUI */}
-                <AppAlert {...notification} toggle={() => setNotification({...notification, isOpen: false})} />
+                <AppAlert {...notification} toggle={() => setNotification({ ...notification, isOpen: false })} />
             </div>
 
             <div className="position-relative bg-dark" style={{ height: '140px', background: 'linear-gradient(45deg, #212529, #dc3545)' }}>
                 <Container className="h-100 d-flex align-items-start pt-3">
                     <Button color="link" className="text-white p-0 d-flex align-items-center text-decoration-none fw-bold shadow-sm" onClick={() => navigate(-1)}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="me-2" viewBox="0 0 16 16">
-                            <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                            <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
                         </svg>
                         Voltar
                     </Button>
@@ -220,14 +205,14 @@ const PublicProfilePage = () => {
                                 <img src={getPic(profile)} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                                 <div className="w-100 h-100 d-flex justify-content-center align-items-center bg-secondary text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="currentColor" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /></svg>
                                 </div>
                             )}
                         </div>
 
                         <h4 className="fw-bold mb-0 text-dark">{profile.first_name} {profile.last_name}</h4>
                         <div className="text-muted fw-semibold mb-3">@{profile.username}</div>
-                        
+
                         <div className="d-flex justify-content-center gap-3 mb-4 text-muted small fw-bold">
                             {profile.zone && <span>{profile.zone}</span>}
                             <span>{profile.birth_date ? calculateAge(profile.birth_date) + ' anos' : 'Idade não definida'}</span>
@@ -249,10 +234,10 @@ const PublicProfilePage = () => {
                         <Row className="gx-2">
                             <Col xs={6}>
                                 {/* BOTÃO INTELIGENTE DE SEGUIR */}
-                                <Button 
-                                    color={followStatus === 'FOLLOWING' ? "secondary" : followStatus === 'PENDING' ? "light" : "danger"} 
+                                <Button
+                                    color={followStatus === 'FOLLOWING' ? "secondary" : followStatus === 'PENDING' ? "light" : "danger"}
                                     outline={followStatus === 'FOLLOWING'}
-                                    disabled={followStatus === 'PENDING'} 
+                                    disabled={followStatus === 'PENDING'}
                                     className="rounded-pill fw-bold w-100 shadow-sm border-2"
                                     onClick={handleFollowAction}
                                 >
@@ -260,8 +245,8 @@ const PublicProfilePage = () => {
                                 </Button>
                             </Col>
                             <Col xs={6}>
-                                <Button 
-                                    color="dark" 
+                                <Button
+                                    color="dark"
                                     className="rounded-pill fw-bold w-100 shadow-sm border-2"
                                     onClick={handleMessage}
                                 >
@@ -287,7 +272,7 @@ const PublicProfilePage = () => {
                 {!hasAccess ? (
                     <div className="bg-white rounded-4 shadow-sm p-4 text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" className="text-danger mb-3" viewBox="0 0 16 16">
-                            <path d="M8 1a4 4 0 0 0-4 4v2.5H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1h-.999V5a4 4 0 0 0-4-4zm-1 4a1 1 0 1 1 2 0v2H7V5zm-4 3.5V6h10v2.5H3z"/>
+                            <path d="M8 1a4 4 0 0 0-4 4v2.5H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1h-.999V5a4 4 0 0 0-4-4zm-1 4a1 1 0 1 1 2 0v2H7V5zm-4 3.5V6h10v2.5H3z" />
                         </svg>
                         <h5 className="fw-bold text-dark">Conteúdo privado</h5>
                         <p className="text-muted mb-3">Esta conta é privada. Pede para seguir para veres as equipas, os highlights e as estatísticas.</p>
@@ -296,7 +281,7 @@ const PublicProfilePage = () => {
                         )}
                     </div>
                 ) : (
-                    <> 
+                    <>
                         {activeTab === 'photos' && (
                             <div>
                                 <div className="d-flex justify-content-between align-items-center mb-3 px-1">
@@ -305,16 +290,16 @@ const PublicProfilePage = () => {
                                 {userPhotos.length > 0 ? (
                                     <div className="d-flex flex-column gap-3">
                                         {userPhotos.map(photo => (
-                                            <HighlightCard 
-                                                key={photo.id} 
-                                                highlight={photo} 
-                                                author={profile} 
+                                            <HighlightCard
+                                                key={photo.id}
+                                                highlight={photo}
+                                                author={profile}
                                             />
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="text-center py-5 bg-white border rounded-4 shadow-sm">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" className="text-secondary opacity-50 mb-2" viewBox="0 0 16 16"><path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1v6zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2z"/><path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" className="text-secondary opacity-50 mb-2" viewBox="0 0 16 16"><path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1v6zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2z" /><path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z" /></svg>
                                         <div className="text-muted small fw-bold">Sem fotos publicadas.</div>
                                     </div>
                                 )}
@@ -330,7 +315,7 @@ const PublicProfilePage = () => {
                                             Posição: <span className="text-danger">{currentPosition}</span>
                                         </small>
                                     </div>
-                                    
+
                                     <div style={{ width: '130px' }}>
                                         <Input type="select" bsSize="sm" className="rounded-pill shadow-sm border-0 fw-bold bg-white text-dark" value={selectedModality} onChange={(e) => setSelectedModality(e.target.value)}>
                                             {availableModalities.length === 0 && <option value="Geral">Geral</option>}
@@ -358,7 +343,7 @@ const PublicProfilePage = () => {
                                             </CardBody>
                                         </Card>
                                     </Col>
-                                    
+
                                     <Col xs={4}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-light border border-success border-opacity-25 h-100">
                                             <CardBody className="p-2 text-center">
@@ -445,22 +430,22 @@ const PublicProfilePage = () => {
                                             if (team.coach == id) roles.push("Treinador");
                                             if (team.captain == id) roles.push("Capitão");
                                             if (roles.length === 0) roles.push("Jogador");
-                                            
+
                                             const roleText = roles.join(" & ");
                                             const badgeColor = roles.includes("Treinador") ? "danger" : (roles.includes("Capitão") ? "danger" : "secondary");
 
                                             return (
                                                 <Col xs={6} key={team.id}>
-                                                    <div 
+                                                    <div
                                                         className="border border-secondary border-opacity-25 rounded-4 p-3 bg-white shadow-sm text-center h-100 pb-4 position-relative cursor-pointer"
                                                         onClick={() => navigate(`/equipa/${team.id}`)}
                                                     >
                                                         <div className="rounded-circle overflow-hidden bg-light mx-auto mb-2 border" style={{ width: '50px', height: '50px' }}>
-                                                            {getPic(team) ? <img src={getPic(team)} alt={team.name} className="w-100 h-100 object-fit-cover"/> : <span className="d-flex align-items-center justify-content-center h-100 fw-bold text-muted small">EQ</span>}
+                                                            {getPic(team) ? <img src={getPic(team)} alt={team.name} className="w-100 h-100 object-fit-cover" /> : <span className="d-flex align-items-center justify-content-center h-100 fw-bold text-muted small">EQ</span>}
                                                         </div>
                                                         <h6 className="fw-bold mb-0 text-truncate" style={{ fontSize: '13px' }}>{team.name}</h6>
                                                         <small className="text-muted d-block mb-3" style={{ fontSize: '11px' }}>{team.modality}</small>
-                                                        
+
                                                         <div className="position-absolute bottom-0 start-50 translate-middle-x w-100 mb-2">
                                                             <Badge color={badgeColor} className="rounded-pill shadow-sm text-truncate px-2" style={{ fontSize: '10px', letterSpacing: '0.5px', maxWidth: '90%' }}>
                                                                 {roleText}
