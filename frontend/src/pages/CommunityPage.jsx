@@ -11,7 +11,7 @@ const CommunityPage = () => {
     const navigate = useNavigate();
 
     // Extrai o utilizador do contexto
-    const { user } = useUserContext();
+    const { user, followingList, refreshFollowing } = useUserContext();
 
     const userId = Number(user?.player_id);
 
@@ -368,7 +368,7 @@ const CommunityPage = () => {
                                                 <Badge color="dark" className="p-2 px-3 rounded-pill shadow-sm">Tu</Badge>
                                             ) : currentUser?.colegas?.includes(player.id) ? (
                                                 <Badge color="success" className="p-2 px-3 rounded-pill shadow-sm">Colega</Badge>
-                                            ) : followedPlayers.includes(player.id) ? (
+                                            ) : followingList.includes(player.id) ? (
                                                 <Button size="sm" color="secondary" className="fw-bold rounded-pill px-3 shadow-sm" disabled>Seguindo</Button>
                                             ) : (
                                                 <Button size="sm" color="danger" className="fw-bold rounded-pill px-3 shadow-sm" onClick={() => handleFollowPlayer(player.id)}>Seguir</Button>

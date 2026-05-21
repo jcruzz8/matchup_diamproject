@@ -177,7 +177,11 @@ def toggle_follow(request, pk):
 @api_view(['GET', 'POST'])
 def teams(request):
     if request.method == 'GET':
-        team_list = Team.objects.all()
+        captain_id = request.GET.get('captain')
+        if captain_id:
+            team_list = Team.objects.filter(captain__id=captain_id)
+        else:
+            team_list = Team.objects.all()
         serializer = TeamSerializer(team_list, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
@@ -244,18 +248,26 @@ def mark_all_notifications_read(request):
 @permission_classes([IsAuthenticated])
 def notification_action(request, pk):
     current_player = request.user.player
-    notification = get_object_or_404(Notification, pk=pk, recipient=current_player)
+    
+    # 1. Garantir leitura do action (suporta JSON e FormData)
     action = request.data.get('action')
-    if action not in ['accept', 'reject']:
-        return Response({'error': 'Ação inválida.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Debug para ver o que chega ao Django
+    # print(f"DEBUG: Dados recebidos: {request.data}") 
 
+    if not action or action not in ['accept', 'reject']:
+        return Response({'error': 'Ação inválida ou não fornecida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    notification = get_object_or_404(Notification, pk=pk, recipient=current_player)
     notification.read = True
     notification.save()
 
+    # Lógica de Seguimento
     if notification.reference_type == 'FOLLOW_REQUEST':
         follow_req = get_object_or_404(FollowRequest, pk=notification.reference_id, to_user=current_player)
         if follow_req.status != 'PENDING':
             return Response({'error': 'Pedido já processado.'}, status=status.HTTP_400_BAD_REQUEST)
+        
         if action == 'accept':
             follow_req.status = 'ACCEPTED'
             follow_req.save()
@@ -264,64 +276,59 @@ def notification_action(request, pk):
                 recipient=follow_req.from_user,
                 actor=current_player,
                 category='Seguidores',
-                message=f'O player {current_player.user.username} aceitou o teu pedido para seguir.',
+                message=f'O player {current_player.user.username} aceitou o teu pedido.',
                 type='success',
                 link=f'/perfil/{current_player.id}'
             )
             return Response({'status': 'ACCEPTED', 'message': 'Pedido aceite.'})
-        follow_req.status = 'REJECTED'
-        follow_req.save()
-        Notification.objects.create(
-            recipient=follow_req.from_user,
-            actor=current_player,
-            category='Seguidores',
-            message=f'O player {current_player.user.username} recusou o teu pedido para seguir.',
-            type='danger',
-            link=f'/perfil/{current_player.id}'
-        )
-        return Response({'status': 'REJECTED', 'message': 'Pedido recusado.'})
+        else:
+            follow_req.status = 'REJECTED'
+            follow_req.save()
+            Notification.objects.create(
+                recipient=follow_req.from_user,
+                actor=current_player,
+                category='Seguidores',
+                message=f'O player {current_player.user.username} recusou o teu pedido.',
+                type='danger',
+                link=f'/perfil/{current_player.id}'
+            )
+            return Response({'status': 'REJECTED', 'message': 'Pedido recusado.'})
 
-    if notification.reference_type == 'TEAM_JOIN_REQUEST':
+    # Lógica de Equipa
+    elif notification.reference_type == 'TEAM_JOIN_REQUEST':
         join_req = get_object_or_404(TeamJoinRequest, pk=notification.reference_id, team__captain=current_player)
         if join_req.status != 'PENDING':
             return Response({'error': 'Pedido já processado.'}, status=status.HTTP_400_BAD_REQUEST)
+        
         if action == 'accept':
             join_req.status = 'ACCEPTED'
             join_req.save()
             team = join_req.team
-            existing_members = list(team.members.exclude(pk=join_req.player.pk))
             team.members.add(join_req.player)
+            
             Notification.objects.create(
                 recipient=join_req.player,
                 actor=current_player,
                 category='Equipa',
-                message=f'O teu pedido para entrar na equipa {team.name} foi aceite.',
+                message=f'O teu pedido para a equipa {team.name} foi aceite.',
                 type='success',
                 link=f'/equipa/{team.id}'
             )
-            for member in existing_members:
-                Notification.objects.create(
-                    recipient=member,
-                    actor=current_player,
-                    category='Equipa',
-                    message=f'Um novo player acabou de se juntar à tua equipa {team.name}, diz olá ao teu novo colega!',
-                    type='info',
-                    link=f'/equipa/{team.id}'
-                )
             return Response({'status': 'ACCEPTED', 'message': 'Pedido de adesão aceite.'})
-        join_req.status = 'REJECTED'
-        join_req.save()
-        Notification.objects.create(
-            recipient=join_req.player,
-            actor=current_player,
-            category='Equipa',
-            message=f'O teu pedido para entrar na equipa {join_req.team.name} foi recusado.',
-            type='danger',
-            link=f'/equipa/{join_req.team.id}'
-        )
-        return Response({'status': 'REJECTED', 'message': 'Pedido de adesão recusado.'})
+        else:
+            join_req.status = 'REJECTED'
+            join_req.save()
+            Notification.objects.create(
+                recipient=join_req.player,
+                actor=current_player,
+                category='Equipa',
+                message=f'O teu pedido para a equipa {join_req.team.name} foi recusado.',
+                type='danger',
+                link=f'/equipa/{join_req.team.id}'
+            )
+            return Response({'status': 'REJECTED', 'message': 'Pedido recusado.'})
 
-    return Response({'error': 'Ação não suportada.'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'Tipo de notificação desconhecido.'}, status=status.HTTP_400_BAD_REQUEST)
 
 # Endpoint de Detalhe para UMA Equipa Específica (Ler, Atualizar, Apagar)
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
@@ -354,7 +361,11 @@ def team_detail(request, pk):
 @api_view(['GET', 'POST'])
 def games(request):
     if request.method == 'GET':
-        game_list = Game.objects.all()
+        organizer_id = request.GET.get('organizer')
+        if organizer_id:
+            game_list = Game.objects.filter(organizer__id=organizer_id)
+        else:
+            game_list = Game.objects.all()
         serializer = GameSerializer(game_list, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
@@ -381,15 +392,19 @@ def game_detail(request, pk):
     elif request.method in ['PUT', 'PATCH']:
         if not request.user.is_authenticated:
             return Response({'error': 'Precisas de fazer login para editar isto.'}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.player != game.organizer:
+            return Response({'error': 'Só o organizador pode gerir este match.'}, status=status.HTTP_403_FORBIDDEN)
         serializer = GameSerializer(game, data=request.data, partial=(request.method == 'PATCH'))
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(organizer=game.organizer)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         if not request.user.is_authenticated:
             return Response({'error': 'Precisas de fazer login para editar isto.'}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.player != game.organizer:
+            return Response({'error': 'Só o organizador pode gerir este match.'}, status=status.HTTP_403_FORBIDDEN)
         game.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -402,9 +417,9 @@ def registrations(request):
         serializer = RegistrationSerializer(reg_list, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
-        serializer = RegistrationSerializer(data=request.data)
+        serializer = RegistrationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(player=request.user.player)
             return Response(status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -422,9 +437,11 @@ def registration_detail(request, pk):
         return Response(serializer.data)
 
     elif request.method in ['PUT', 'PATCH']:
-        serializer = RegistrationSerializer(registration, data=request.data, partial=(request.method == 'PATCH'))
+        if request.user.player != registration.game.organizer:
+            return Response({'error': 'Só o organizador do jogo pode gerir esta inscrição.'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = RegistrationSerializer(registration, data=request.data, partial=(request.method == 'PATCH'), context={'request': request})
         if serializer.is_valid():
-            saved_registration = serializer.save()
+            saved_registration = serializer.save(game=registration.game, player=registration.player, team=registration.team)
             if saved_registration.status == 'APPROVED':
                 if saved_registration.game.price == 0 or saved_registration.payment_status == 'PAID':
                     saved_registration.payment_status = 'PAID'
@@ -440,6 +457,8 @@ def registration_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        if request.user.player != registration.player and request.user.player != registration.game.organizer:
+            return Response({'error': 'Não tens permissão para cancelar esta inscrição.'}, status=status.HTTP_403_FORBIDDEN)
         registration.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -508,21 +527,24 @@ def messages_view(request):
     player = request.user.player
     
     if request.method == 'GET':
-        # Vai buscar mensagens que enviei, recebi diretamente, ou que foram para as minhas equipas
-        my_teams = player.teams.all()
-        msgs = Message.objects.filter(
-            Q(sender=player) | 
-            Q(receiver=player) | 
-            Q(team__in=my_teams)
-        ).order_by('timestamp')
+        # 1. Mensagens diretas (onde eu sou o sender ou o receiver)
+        direct_msgs = Message.objects.filter(Q(sender=player) | Q(receiver=player), team__isnull=True)
         
-        serializer = MessageSerializer(msgs, many=True)
+        # 2. As minhas equipas
+        my_teams = Team.objects.filter(Q(members=player) | Q(captain=player) | Q(coach=player)).distinct()
+        
+        # 3. Mensagens das minhas equipas
+        team_msgs = Message.objects.filter(team__in=my_teams)
+        
+        # 4. Juntar tudo e ordenar por data
+        all_msgs = (direct_msgs | team_msgs).distinct().order_by('timestamp')
+        
+        serializer = MessageSerializer(all_msgs, many=True)
         return Response(serializer.data)
         
     elif request.method == 'POST':
         serializer = MessageSerializer(data=request.data)
         if serializer.is_valid():
-            # Grava a mensagem forçando o 'sender' a ser o jogador autenticado
             serializer.save(sender=player)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -574,3 +596,41 @@ def toggle_like(request, pk):
         liked = True
         
     return Response({'liked': liked, 'total_likes': highlight.likes.count()}, status=status.HTTP_200_OK)
+
+# Endpoint para o Jogador confirmar que pagou a inscrição
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pay_registration(request, pk):
+    try:
+        # Garante que só o dono da inscrição pode confirmar o seu próprio pagamento
+        registration = Registration.objects.get(pk=pk, player=request.user.player)
+    except Registration.DoesNotExist:
+        return Response({'error': 'Inscrição não encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if registration.status != 'APPROVED':
+        return Response({'error': 'A inscrição tem de ser aceite antes de poderes pagar.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    registration.payment_status = 'PAID'
+    registration.payment_receipt = 'Confirmado pelo jogador'
+    registration.payment_date = timezone.now()
+    registration.save()
+
+    # Notificar o organizador do jogo que o pagamento foi feito
+    Notification.objects.create(
+        recipient=registration.game.organizer,
+        actor=request.user.player,
+        category='Pagamento',
+        message=f'O player {request.user.username} confirmou o pagamento para o jogo em {registration.game.location}.',
+        type='success',
+        link=f'/games/{registration.game.id}'
+    )
+
+    return Response({'status': 'PAID', 'message': 'Pagamento confirmado!'})
+
+# Endpoint para obter a lista de IDs dos jogadores que o user autenticado segue
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_following(request):
+    # Devolve a lista de IDs de jogadores que o user logado segue
+    following_ids = request.user.player.following.values_list('id', flat=True)
+    return Response(list(following_ids))

@@ -121,7 +121,7 @@ const navigate = useNavigate();
 
     return (
         <div className="bg-light min-vh-100 pb-5">
-            <TopNavBarSimple showBack={true} />
+            <TopNavBarSimple />
 
             {alertConfig.show && (
                 <Alert color={alertConfig.color} className="position-fixed top-0 start-50 translate-middle-x mt-4 shadow-lg fw-bold" style={{ zIndex: 1050, minWidth: '300px', textAlign: 'center' }}>
@@ -130,13 +130,20 @@ const navigate = useNavigate();
             )}
 
             <Container className="pt-4 pb-5 mb-4">
-                <div className="text-center mb-4">
-                    <h3 className="fw-bold m-0 text-dark">Criar Nova Equipa</h3>
-                    <p className="text-muted small">Reúne os teus amigos e domina os campos!</p>
-                </div>
-
                 <Card className="shadow-sm border-0 rounded-4 overflow-hidden mb-5">
                     <CardBody className="p-4 p-md-5">
+                        <div className="d-flex align-items-center justify-content-between gap-3 mb-4" style={{ minHeight: '42px' }}>
+                            <Button color="link" className="text-dark p-0" onClick={() => navigate(-1)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                                    <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                                </svg>
+                            </Button>
+                            <div className="flex-grow-1 text-center">
+                                <h3 className="fw-bold m-0 text-dark">Criar Nova Equipa</h3>
+                                <p className="text-muted small mb-0">Reúne os teus amigos e domina os campos!</p>
+                            </div>
+                            <div style={{ width: '36px' }} />
+                        </div>
                         <form onSubmit={handleCreateTeam}>
                             
                             {/* PRÉ-VISUALIZAÇÃO DA FOTO */}
