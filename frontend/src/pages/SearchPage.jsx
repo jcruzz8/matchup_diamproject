@@ -6,7 +6,6 @@ import BottomNavBar from '../components/BottomNavBar';
 import MatchCard from '../components/MatchCard';
 
 const SearchPage = () => {
-// 2. Apagámos o navigate e o localStorage por completo!
 
     const [allGames, setAllGames] = useState([]);
     const [filteredGames, setFilteredGames] = useState([]);
@@ -16,9 +15,6 @@ const SearchPage = () => {
     const [modalityFilter, setModalityFilter] = useState('Todas');
     const [dateFilter, setDateFilter] = useState('Todas');
 
-    // 3. useEffect super limpo e direto ao assunto.
-    // Como o React só desenha esta página se houver sessão válida,
-    // a única preocupação do componente é carregar os dados!
     useEffect(() => {
         fetchAllGames();
     }, []);
@@ -41,18 +37,18 @@ const SearchPage = () => {
     useEffect(() => {
         let resultados = allGames;
 
-        // 1. Filtro de Campo
+        // Filtro de Campo
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
             resultados = resultados.filter(g => g.location.toLowerCase().includes(query));
         }
 
-        // 2. Filtro de Modalidade
+        // Filtro de Modalidade
         if (modalityFilter !== 'Todas') {
             resultados = resultados.filter(g => g.modality === modalityFilter);
         }
 
-        // 3. Filtro de Data
+        // Filtro de Data
         if (dateFilter !== 'Todas') {
             // Cria a data de "Hoje" à meia-noite exata para fazer contas certas
             const hoje = new Date();

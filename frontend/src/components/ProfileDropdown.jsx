@@ -7,10 +7,10 @@ import {useUserContext} from "../context/UserProvider.jsx";
 const ProfileDropdown = () => {
 const navigate = useNavigate();
 
-    // 2. Extrair o utilizador e a função de atualizar (setUser) do contexto
+    // Extrair o utilizador e a função de atualizar (setUser) do contexto
     const { user, setUser } = useUserContext();
 
-    // 3. Garantir o ID numérico e o username diretamente do estado global de forma segura
+    // Garantir o ID numérico e o username de forma segura
     const userId = Number(user?.player_id);
     const username = user?.username || "Jogador";
 
@@ -18,14 +18,13 @@ const navigate = useNavigate();
     const [userProfilePic, setUserProfilePic] = useState(null);
     const [nextGame, setNextGame] = useState(null);
 
-    // 4. O useEffect agora reage de forma fluída à variável do contexto
     useEffect(() => {
         // Se por algum motivo o dropdown for desenhado sem sessão, não tentamos ir buscar nada
         if (!userId) return;
 
         const fetchUserData = async () => {
             try {
-                // 1. Foto de Perfil
+                // Foto de Perfil
                 const resPlayer = await axios.get(`http://localhost:8000/api/players/${userId}/`);
                 let picUrl = resPlayer.data.photo || resPlayer.data.image || resPlayer.data.avatar || resPlayer.data.profile_picture;
                 if (picUrl) {
@@ -33,10 +32,9 @@ const navigate = useNavigate();
                     setUserProfilePic(picUrl);
                 }
 
-                // 2. Jogos Aceites
+                // Jogos Aceites
                 const resRegs = await axios.get(`http://localhost:8000/api/registrations/`);
 
-                // Graças ao Number(), podemos usar '===' de forma segura!
                 const myAcceptedRegs = resRegs.data.filter(reg => reg.player === userId && reg.status === 'APPROVED');
 
                 const resGames = await axios.get(`http://localhost:8000/api/games/`);
@@ -44,7 +42,7 @@ const navigate = useNavigate();
 
                 const agora = new Date();
 
-                // Filtra para mostrar apenas jogos no futuro
+                // Filtra para mostrar apenas jogos futuros
                 let jogosFuturos = myGames.filter(g => new Date(`${g.date}T${g.time}`) >= agora);
                 jogosFuturos.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
 
@@ -70,11 +68,7 @@ const navigate = useNavigate();
         } catch (error) {
             console.error("Erro ao fechar sessão no backend:", error);
         } finally {
-            // ADEUS localStorage e window.location.href!
-            // Atualizamos o contexto de forma reativa:
             setUser(null);
-
-            // Redirecionamos através do React Router de forma suave
             navigate('/landing');
         }
     };

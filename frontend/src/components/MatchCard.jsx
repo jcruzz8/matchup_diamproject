@@ -4,10 +4,10 @@ import axios from 'axios';
 import {useUserContext} from "../context/UserProvider.jsx";
 
 const MatchCard = ({ game, userRegistrationStatus }) => {
-// 2. Extrair o utilizador do contexto
+    // Extrair o utilizador do contexto
     const { user } = useUserContext();
 
-    // 3. Garantir o ID numérico seguro (prevenido para o caso de no futuro mostrares este cartão numa página pública)
+    // Garantir o ID numérico seguro
     const userId = user?.player_id ? Number(user.player_id) : null;
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
@@ -24,7 +24,6 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
 
     // Abre o Modal e vai buscar as equipas ao Django
     const openTeamModal = async (position) => {
-        // Já não lemos do localStorage! Usamos a variável userId
         if (!userId) {
             setAlertConfig({ show: true, message: 'Precisas de iniciar sessão para inscrever a tua equipa!', color: 'danger' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
@@ -115,7 +114,6 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
             return;
         }
 
-        // Simplificado de parseInt(localStorage...) para apenas userId
         if (game.occupied_data?.players?.includes(userId)) {
             setAlertConfig({ show: true, message: 'Já tens um pedido pendente ou aceite para este match!', color: 'warning' });
             setTimeout(() => setAlertConfig({ show: false, message: '', color: 'warning' }), 3000);
@@ -187,6 +185,11 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                         </span>
                     </div>
 
+                    <div className="d-flex justify-content-between mb-3">
+                        <span className="text-muted">Inscrições até: <strong>{game.registration_deadline}</strong></span>
+                        <span className="text-muted">Pagamento até: <strong>{game.payment_deadline}</strong></span>
+                    </div>
+
                     {/* AUTO-BALANCEAMENTO */}
                     {game.distribution_model === 'Auto-Balanceamento' && (
                         <>
@@ -201,11 +204,11 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                                     color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : "danger"}
                                     className="px-4 py-2 fw-bold fs-5 shadow-sm rounded-3"
                                     onClick={handleInscrever}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))}
+                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.players?.includes(userId)}
                                 >
                                     {userRegistrationStatus === 'APPROVED' ? 'CONFIRMADO' :
                                         userRegistrationStatus === 'PENDING' ? 'PENDENTE' :
-                                            game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id'))) ? 'Já Inscrito' : 'Inscrever'}
+                                            game.occupied_data?.players?.includes(userId) ? 'Já Inscrito' : 'Inscrever'}
                                 </Button>
                             </div>
                         </>
@@ -217,17 +220,17 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                             <Col xs={6} className="border-end border-dark text-center">
                                 <h6 className="fw-bold mb-4">Equipa 1 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa1, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
                                 <Button
-                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa1') && !game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))}
+                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa1') && !game.occupied_data?.players?.includes(userId)}
                                     color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : game.occupied_data?.positions?.includes('equipa1') ? "success" : "dark"}
                                     className="w-100 fw-bold border-2 rounded-3 py-2"
                                     onClick={() => openTeamModal('equipa1')}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa1') || game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))}
+                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa1') || game.occupied_data?.players?.includes(userId)}
                                 >
                                     {userRegistrationStatus === 'APPROVED' ? <><span className="fw-bold fs-5">CONFIRMADO</span></> :
                                         userRegistrationStatus === 'PENDING' ? <><span className="fw-bold fs-5">PENDENTE</span></> :
                                             game.occupied_data?.positions?.includes('equipa1')
                                                 ? <><span className="small fw-normal">Ocupado por:</span><br />{game.occupied_data.teams['equipa1']}</>
-                                                : game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))
+                                                : game.occupied_data?.players?.includes(userId)
                                                     ? <><span className="fw-bold">Pedido Enviado</span><br /><small>Aguarda aprovação</small></>
                                                     : <><span className="fw-bold">Inscrever a</span><br />Minha Equipa</>
                                     }
@@ -237,17 +240,17 @@ const MatchCard = ({ game, userRegistrationStatus }) => {
                             <Col xs={6} className="text-center">
                                 <h6 className="fw-bold mb-4">Equipa 2 <span className="d-inline-block align-middle ms-2" style={{ backgroundColor: game.cor_equipa2, width: '16px', height: '16px', border: '1px solid black', borderRadius: '3px' }}></span></h6>
                                 <Button
-                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa2') && !game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))}
+                                    outline={userRegistrationStatus !== 'APPROVED' && userRegistrationStatus !== 'PENDING' && !game.occupied_data?.positions?.includes('equipa2') && !game.occupied_data?.players?.includes(userId)}
                                     color={(userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING') ? "success" : game.occupied_data?.positions?.includes('equipa2') ? "success" : "dark"}
                                     className="w-100 fw-bold border-2 rounded-3 py-2"
                                     onClick={() => openTeamModal('equipa2')}
-                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa2') || game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))}
+                                    disabled={userRegistrationStatus === 'APPROVED' || userRegistrationStatus === 'PENDING' || game.occupied_data?.positions?.includes('equipa2') || game.occupied_data?.players?.includes(userId)}
                                 >
                                     {userRegistrationStatus === 'APPROVED' ? <><span className="fw-bold fs-5">CONFIRMADO</span></> :
                                         userRegistrationStatus === 'PENDING' ? <><span className="fw-bold fs-5">PENDENTE</span></> :
                                             game.occupied_data?.positions?.includes('equipa2')
                                                 ? <><span className="small fw-normal">Ocupado por:</span><br />{game.occupied_data.teams['equipa2']}</>
-                                                : game.occupied_data?.players?.includes(parseInt(localStorage.getItem('matchup_user_id')))
+                                                : game.occupied_data?.players?.includes(userId)
                                                     ? <><span className="fw-bold">Pedido Enviado</span><br /><small>Aguarda aprovação</small></>
                                                     : <><span className="fw-bold">Inscrever a</span><br />Minha Equipa</>
                                     }

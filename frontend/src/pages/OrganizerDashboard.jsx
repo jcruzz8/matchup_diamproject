@@ -58,7 +58,7 @@ const MiniPitch = ({ positionId, modality, titulares, color1, color2 }) => {
 const OrganizerDashboard = () => {
 const navigate = useNavigate();
 
-    // 2. Extrair o utilizador do contexto global
+    // Extrair o utilizador do contexto global
     const { user } = useUserContext();
 
     // Garantir que o ID é um número seguro
@@ -70,11 +70,7 @@ const navigate = useNavigate();
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [editingGame, setEditingGame] = useState(null);
 
-    // 3. REMOVIDO: Estados inúteis (username), funções não utilizadas (handleLogout)
-    // e o antigo useEffect do localStorage!
-
     useEffect(() => {
-        // Se temos um ID válido (garantido pelas rotas protegidas do App.jsx)
         if (userId) {
             fetchMyData();
         }

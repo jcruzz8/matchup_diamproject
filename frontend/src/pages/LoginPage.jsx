@@ -39,9 +39,6 @@ const LoginPage = () => {
                 }, 3000);
 
             }); // axios faz o pedido ao Django, e espera pela resposta
-
-
-
     };
 
     return (

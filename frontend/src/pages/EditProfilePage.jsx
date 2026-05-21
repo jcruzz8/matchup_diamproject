@@ -9,10 +9,10 @@ const EditProfilePage = () => {
 const navigate = useNavigate();
     const fileInputRef = useRef(null);
 
-    // 2. Extrair o utilizador e a função setUser do contexto (adeus localStorage!)
+    // Extrair o utilizador e a função setUser do contexto 
     const { user, setUser } = useUserContext();
 
-    // Garantir que o ID é um número
+    // Garantir que o ID é um número seguro
     const userId = Number(user?.player_id);
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
@@ -44,7 +44,7 @@ const navigate = useNavigate();
         return Math.abs(ageDt.getUTCFullYear() - 1970);
     };
 
-    // 3. O useEffect fica super limpo. A rota App.jsx já nos protege!
+    // O useEffect fica super limpo. A rota App.jsx já nos protege!
     useEffect(() => {
         if (userId) {
             fetchUserData();
@@ -123,7 +123,6 @@ const navigate = useNavigate();
                 headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' }, withCredentials: true
             });
 
-            // 4. A MAGIA ACONTECE AQUI: Em vez do localStorage, atualizamos o contexto global!
             // Se o utilizador mudou de username, a Navbar e outras páginas reagem de imediato.
             if (formData.username !== user?.username) {
                 setUser({ ...user, username: formData.username });
@@ -134,7 +133,6 @@ const navigate = useNavigate();
 
         } catch (error) {
             console.error("Erro ao atualizar perfil:", error);
-            // Agora já mostramos os erros verdadeiros do backend!
             const errorMessage = error.response?.data?.error || 'Erro ao atualizar. O Username/Email já existe?';
             showAlert(errorMessage, 'danger');
             setIsSubmitting(false);

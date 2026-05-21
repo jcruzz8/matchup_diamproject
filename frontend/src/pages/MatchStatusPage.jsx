@@ -12,13 +12,12 @@ const navigate = useNavigate();
     const [myRequests, setMyRequests] = useState([]);
     const [activeTab, setActiveTab] = useState('APPROVED');
 
-    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    // Extrair o utilizador do contexto
     const { user } = useUserContext();
 
     // Garantir que o ID é um número seguro
     const userId = Number(user?.player_id);
 
-    // 3. useEffect super limpo: já não precisamos do navigate('/login') aqui!
     useEffect(() => {
         if (userId) {
             fetchMyStatuses();
@@ -29,12 +28,11 @@ const navigate = useNavigate();
         try {
             const resRegs = await axios.get(`http://localhost:8000/api/registrations/`);
 
-            // 4. Como userId agora é um Number garantido, podemos usar '==='
             const userRegs = resRegs.data.filter(reg => reg.player === userId);
 
             const resGames = await axios.get(`http://localhost:8000/api/games/`);
 
-            // Ordena os pedidos do mais recente (maior ID) para o mais antigo
+            // Ordena os pedidos do mais recente para o mais antigo
             userRegs.sort((a, b) => b.id - a.id);
 
             const seenGames = new Set();
@@ -44,7 +42,6 @@ const navigate = useNavigate();
             for (const reg of userRegs) {
                 if (!seenGames.has(reg.game)) {
                     seenGames.add(reg.game);
-                    // Aqui mantemos '==' ou convertemos g.id para Number se necessário
                     const gameInfo = resGames.data.find(g => Number(g.id) === Number(reg.game));
                     if (gameInfo) {
                         uniqueRequests.push({ ...reg, gameDetails: gameInfo });
