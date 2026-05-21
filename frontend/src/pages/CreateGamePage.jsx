@@ -9,31 +9,28 @@ import {useUserContext} from "../context/UserProvider.jsx";
 const CreateGamePage = () => {
 const navigate = useNavigate();
 
-    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    // Extrair o utilizador do contexto
     const { user } = useUserContext();
 
     // Garantir que temos o ID correto para associar ao jogo
     const organizerId = user?.player_id;
 
-    // 3. O formData agora usa a variável protegida do contexto
     const [formData, setFormData] = useState({
         modality: 'Futebol',
         location: '',
         date: '',
         time: '',
+        registration_deadline: '',
+        payment_deadline: '',
         price: '',
         titulares: '5',
         suplentes: '0',
         cor_equipa1: '#ff0000',
         cor_equipa2: '#0000ff',
-        distribution_model: 'Escolha Livre',
-        organizer: organizerId
+        distribution_model: 'Escolha Livre'
     });
 
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
-
-    // 4. REMOVIDO: O useEffect que verificava o organizerId e fazia navigate('/login')
-    // já não é necessário! A rota protegida no teu App.jsx trata disso por nós.
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -49,17 +46,32 @@ const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!user) {
+            setAlertConfig({ show: true, message: 'Precisas de iniciar sessão antes de criar um jogo.', color: 'danger' });
+            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
+            return;
+        }
+
+        if (formData.payment_deadline && formData.registration_deadline && formData.payment_deadline < formData.registration_deadline) {
+            setAlertConfig({ show: true, message: 'A data limite de pagamento deve ser igual ou posterior à data limite de inscrição.', color: 'danger' });
+            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
+            return;
+        }
         try {
-            await axios.post('http://localhost:8000/api/games/', formData, {
-                headers: { 'X-CSRFToken':getCSRFToken(),'Content-Type': 'multipart/form-data' },
+            await axios.post('http://localhost:8000/api/games/', {
+                ...formData,
+                organizer: user.player_id
+            }, {
+                headers: { 'X-CSRFToken':getCSRFToken() },
                 withCredentials: true
             });
             setAlertConfig({ show: true, message: 'Jogo criado com sucesso! A preparar o campo...', color: 'success' });
             setTimeout(() => navigate('/'), 2000);
         } catch (error) {
             console.error(error.response?.data);
-            setAlertConfig({ show: true, message: 'Erro ao criar jogo. Verifica os dados.', color: 'danger' });
-            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 3000);
+            const backendMessage = error.response?.data?.error || error.response?.data?.detail || JSON.stringify(error.response?.data);
+            setAlertConfig({ show: true, message: backendMessage || 'Erro ao criar jogo. Verifica os dados.', color: 'danger' });
+            setTimeout(() => setAlertConfig({ show: false, message: '', color: 'danger' }), 5000);
         }
     };
 
@@ -112,6 +124,21 @@ const navigate = useNavigate();
                                             <FormGroup className="mb-3">
                                                 <Label className="fw-bold">Hora</Label>
                                                 <Input type="time" name="time" value={formData.time} onChange={handleChange} required />
+                                            </FormGroup>
+                                        </Col>
+                                    </Row>
+
+                                    <Row>
+                                        <Col xs={6}>
+                                            <FormGroup className="mb-3">
+                                                <Label className="fw-bold">Data limite de inscrição</Label>
+                                                <Input type="date" name="registration_deadline" value={formData.registration_deadline} onChange={handleChange} required />
+                                            </FormGroup>
+                                        </Col>
+                                        <Col xs={6}>
+                                            <FormGroup className="mb-3">
+                                                <Label className="fw-bold">Data limite de pagamento</Label>
+                                                <Input type="date" name="payment_deadline" value={formData.payment_deadline} onChange={handleChange} required />
                                             </FormGroup>
                                         </Col>
                                     </Row>

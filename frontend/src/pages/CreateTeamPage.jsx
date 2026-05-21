@@ -10,10 +10,10 @@ const CreateTeamPage = () => {
 const navigate = useNavigate();
     const fileInputRef = useRef(null);
 
-    // 2. Extrair o utilizador do contexto (adeus localStorage!)
+    // Extrair o utilizador do contexto
     const { user } = useUserContext();
 
-    // Garantir que o ID é um número seguro para as operações seguintes
+    // Garantir que o ID é um número seguro
     const userId = Number(user?.player_id);
 
     // Estados do Formulário
@@ -32,10 +32,7 @@ const navigate = useNavigate();
     const [alertConfig, setAlertConfig] = useState({ show: false, message: '', color: 'success' });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // 3. useEffect super limpo! Removemos o "navigate('/login')" e movemos
-    // a função fetchUserData para fora, tornando o código mais legível.
     useEffect(() => {
-        // Como a rota está protegida no App.jsx, temos a certeza que o userId existe
         if (userId) {
             fetchUserData();
         }
@@ -180,7 +177,7 @@ const navigate = useNavigate();
                                 <Input type="text" placeholder="Ex: Lisboa" className="form-control-lg border-2 bg-light shadow-none" value={city} onChange={(e) => setCity(e.target.value)} />
                             </FormGroup>
 
-                            {/* SELEÇÃODE TREINADOR */}
+                            {/* SELEÇÃO DE TREINADOR */}
                             <FormGroup className="mb-5">
                                 <Label className="fw-bold small text-muted text-uppercase">Treinador (Opcional)</Label>
                                 <div 

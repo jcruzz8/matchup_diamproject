@@ -6,6 +6,8 @@ import App from './App.jsx'
 import axios from "axios";
 import UserProvider from "./context/UserProvider.jsx";
 axios.defaults.withCredentials = true;
+axios.defaults.xsrfCookieName = 'csrftoken';
+axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 
 createRoot(document.getElementById('root')).render(
   <UserProvider>

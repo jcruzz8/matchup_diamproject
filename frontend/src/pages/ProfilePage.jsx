@@ -1,76 +1,102 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate as routerNavigate, useParams as routerParams } from 'react-router-dom';
 import axios from 'axios';
-import { Container, Row, Col, Card, CardBody, Button, Badge, Input } from 'reactstrap';
+import { Container, Row, Col, Card, CardBody, Button, Badge, Input, Modal } from 'reactstrap'; 
 import TopNavBarSimple from '../components/TopNavBarSimple';
 import BottomNavBar from '../components/BottomNavBar';
-import {useUserContext} from "../context/UserProvider.jsx";
+import HighlightCard from '../components/HighlightCard';
+import AppAlert from '../components/AppAlert';
+import { useUserContext } from "../context/UserProvider.jsx";
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 
 const ProfilePage = () => {
-    const navigate = useNavigate();
-
-    // 1. Lemos o ID do URL (se estivermos a ver o perfil de outra pessoa)
-    const { id } = useParams();
-
-    // 2. Trazemos o utilizador global do Contexto (em vez do localStorage)
+    const navigate = routerNavigate();
+    const { id } = routerParams();
     const { user } = useUserContext();
-
-    // 3. MATEMÁTICA DE IDs (Segurança de Tipos)
-    // Se vier um ID no URL, usamos esse. Se não vier, mostramos o perfil do utilizador que fez login.
     const profileId = id ? Number(id) : user?.player_id;
-
-    // O botão "Editar Perfil" só aparece se o perfil que estamos a ver for o nosso!
     const isMyProfile = profileId === Number(user?.player_id);
 
     const [profile, setProfile] = useState(null);
     const [userTeams, setUserTeams] = useState([]);
     const [userPhotos, setUserPhotos] = useState([]);
-
-    // Controlo de UI
     const [activeTab, setActiveTab] = useState('photos');
     const [selectedModality, setSelectedModality] = useState('Geral');
 
+    // Estados de Notificações e Delete Modal
+    const [notification, setNotification] = useState({ message: '', type: '', isOpen: false });
+    const [modalDelete, setModalDelete] = useState({ isOpen: false, id: null });
+
+    const showNotification = (message, type) => {
+        setNotification({ message, type, isOpen: true });
+        setTimeout(() => setNotification({ ...notification, isOpen: false }), 3000);
+    };
+
     useEffect(() => {
-        if (profileId) { // Só carrega os dados se já tivermos a certeza de qual é o ID
+        if (profileId) { 
             fetchProfileData();
             fetchUserTeams();
             fetchUserPhotos();
         }
-    }, [profileId]); // Executa sempre que mudares de um perfil para outro
+    }, [profileId]);
 
     const fetchProfileData = async () => {
         try {
-            // Alterado de user.player.id para profileId (dinâmico)
             const res = await axios.get(`http://localhost:8000/api/players/${profileId}/`);
             setProfile(res.data);
-
             if (res.data.sport_positions && Object.keys(res.data.sport_positions).length > 0) {
                 setSelectedModality(Object.keys(res.data.sport_positions)[0]);
             }
-        } catch (error) {
-            console.error("Erro ao carregar perfil:", error);
-        }
+        } catch (error) { console.error("Erro ao carregar perfil:", error); }
     };
 
     const fetchUserTeams = async () => {
         try {
             const res = await axios.get(`http://localhost:8000/api/teams/`);
-            // Alterado para usar o profileId dinâmico
             const myTeams = res.data.filter(t => t.captain == profileId || (t.members && t.members.includes(profileId)));
             setUserTeams(myTeams);
-        } catch (error) {
-            console.error("Erro ao carregar equipas:", error);
-        }
+        } catch (error) { console.error("Erro ao carregar equipas:", error); }
     };
 
     const fetchUserPhotos = async () => {
         try {
             const res = await axios.get(`http://localhost:8000/api/highlights/`);
-            // Alterado para usar o profileId dinâmico
             const myPhotos = res.data.filter(photo => photo.player == profileId);
             setUserPhotos(myPhotos.reverse());
-        } catch {
-            console.log("Sem fotos ou endpoint não criado ainda.");
+        } catch { console.log("Sem fotos."); }
+    };
+
+    const confirmDelete = (highlightId) => {
+        setModalDelete({ isOpen: true, id: highlightId });
+    };
+
+    const performDelete = async () => {
+        try {
+            const csrftoken = getCookie('csrftoken');
+            await axios.delete(`http://localhost:8000/api/highlights/${modalDelete.id}/`, {
+                withCredentials: true,
+                headers: { 'X-CSRFToken': csrftoken }
+            });
+            setUserPhotos(userPhotos.filter(p => p.id !== modalDelete.id));
+            showNotification("Publicação apagada com sucesso!", "success");
+        } catch (error) {
+            console.error("Erro ao apagar:", error);
+            showNotification("Houve um erro. Tenta novamente.", "danger");
+        } finally {
+            setModalDelete({ isOpen: false, id: null });
         }
     };
 
@@ -89,14 +115,9 @@ const ProfilePage = () => {
         </div>
     );
     
-    // Procura as stats específicas da modalidade. Se não existirem, usa as globais (fallback)
     let currentStats = {
-        matches_played: profile.matches_played || 0,
-        wins: profile.wins || 0,
-        draws: profile.draws || 0,
-        losses: profile.losses || 0,
-        goals: profile.goals || 0,
-        assists: profile.assists || 0
+        matches_played: profile.matches_played || 0, wins: profile.wins || 0, draws: profile.draws || 0,
+        losses: profile.losses || 0, goals: profile.goals || 0, assists: profile.assists || 0
     };
 
     if (selectedModality !== 'Geral' && profile.modality_stats && profile.modality_stats[selectedModality]) {
@@ -104,14 +125,9 @@ const ProfilePage = () => {
     }
 
     const winRate = currentStats.matches_played > 0 ? Math.round((currentStats.wins / currentStats.matches_played) * 100) : 0;
-    
-    // Descobre a posição na modalidade selecionada
     const currentPosition = profile.sport_positions ? profile.sport_positions[selectedModality] : 'Não definida';
-
-    // Lista de modalidades para o Dropdown
     const availableModalities = profile.sport_positions ? Object.keys(profile.sport_positions) : [];
 
-    // Calcula idade
     const calculateAge = (dob) => {
         if (!dob) return '';
         const diffMs = Date.now() - new Date(dob).getTime();
@@ -122,14 +138,28 @@ const ProfilePage = () => {
     return (
         <div className="bg-light min-vh-100 pb-5">
             <TopNavBarSimple />
+            <AppAlert {...notification} toggle={() => setNotification({...notification, isOpen: false})} />
 
-            {/* ZONA DE CAPA E FOTO */}
+            {/* MODAL DE CONFIRMAÇÃO DE APAGAR */}
+            <Modal isOpen={modalDelete.isOpen} toggle={() => setModalDelete({isOpen: false, id: null})} centered className="rounded-4">
+                <div className="p-4 text-center">
+                    <div className="rounded-circle bg-danger bg-opacity-10 d-flex justify-content-center align-items-center mx-auto mb-3" style={{ width: '60px', height: '60px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" className="text-danger" viewBox="0 0 16 16"><path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.815 1.5L12 14.082a1 1 0 0 1-.997.918H4.885a1 1 0 0 1-.997-.918L3.185 4h9.63Z"/></svg>
+                    </div>
+                    <h5 className="fw-bold">Apagar Publicação?</h5>
+                    <p className="text-muted small">Esta ação não pode ser revertida e a foto desaparecerá da tua galeria.</p>
+                    <div className="d-flex gap-2 justify-content-center mt-4">
+                        <Button color="light" className="rounded-pill fw-bold px-4" onClick={() => setModalDelete({isOpen: false, id: null})}>Cancelar</Button>
+                        <Button color="danger" className="rounded-pill fw-bold px-4" onClick={performDelete}>Sim, Apagar</Button>
+                    </div>
+                </div>
+            </Modal>
+
             <div className="position-relative bg-dark" style={{ height: '140px', background: 'linear-gradient(45deg, #212529, #dc3545)' }}></div>
 
             <Container className="pb-5 mb-5" style={{ marginTop: '-60px' }}>
                 <Card className="shadow-sm border-0 rounded-4 mb-4">
                     <CardBody className="p-4 text-center">
-                        
                         <div className="rounded-circle overflow-hidden bg-white mx-auto border border-4 border-white shadow-sm position-relative mb-3" style={{ width: '120px', height: '120px', backgroundColor: '#f8f9fa' }}>
                             {getPic(profile) ? (
                                 <img src={getPic(profile)} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -161,46 +191,36 @@ const ProfilePage = () => {
                             </div>
                         </div>
 
-                        {/* BOTÕES DE AÇÃO */}
                         {isMyProfile ? (
-                            <Button outline color="danger" className="rounded-pill fw-bold px-4 w-100 shadow-sm border-2" onClick={() => navigate('/editar-perfil')}>
-                                Editar Perfil
-                            </Button>
+                            <Button outline color="danger" className="rounded-pill fw-bold px-4 w-100 shadow-sm border-2" onClick={() => navigate('/editar-perfil')}>Editar Perfil</Button>
                         ) : (
-                            <Button color="danger" className="rounded-pill fw-bold px-4 w-100 shadow-sm border-2">
-                                Seguir
-                            </Button>
+                            <Button color="danger" className="rounded-pill fw-bold px-4 w-100 shadow-sm border-2">Seguir</Button>
                         )}
                     </CardBody>
                 </Card>
 
-                {/* TABS DE NAVEGAÇÃO DO PERFIL */}
                 <div className="d-flex bg-white rounded-pill p-1 shadow-sm border mb-4">
-                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'stats' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('stats')}>
-                        Stats
-                    </button>
-                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'photos' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('photos')}>
-                        Highlights
-                    </button>
-                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'teams' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('teams')}>
-                        Equipas
-                    </button>
+                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'stats' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('stats')}>Stats</button>
+                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'photos' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('photos')}>Highlights</button>
+                    <button className={`btn btn-sm flex-fill rounded-pill fw-bold ${activeTab === 'teams' ? 'btn-danger shadow-sm' : 'text-muted border-0 bg-transparent'}`} onClick={() => setActiveTab('teams')}>Equipas</button>
                 </div>
 
-                {/* HighLights */}
                 {activeTab === 'photos' && (
                     <div>
                         <div className="d-flex justify-content-between align-items-center mb-3 px-1">
                             <h6 className="fw-bold m-0 text-dark">Highlights</h6>
-                            {isMyProfile && <Button size="sm" color="danger" outline className="rounded-pill fw-bold px-3">+ Publicar</Button>}
+                            {isMyProfile && <Button size="sm" color="danger" outline className="rounded-pill fw-bold px-3" onClick={() => navigate('/criar/post')}>+ Publicar</Button>}
                         </div>
                         
                         {userPhotos.length > 0 ? (
-                            <div className="d-flex flex-wrap gap-1">
+                            <div className="d-flex flex-column gap-3">
                                 {userPhotos.map(photo => (
-                                    <div key={photo.id} className="bg-secondary" style={{ width: 'calc(33.33% - 4px)', aspectRatio: '1/1', overflow: 'hidden' }}>
-                                        <img src={getPic(photo)} alt="Highlight" className="w-100 h-100 object-fit-cover" />
-                                    </div>
+                                    <HighlightCard 
+                                        key={photo.id} 
+                                        highlight={photo} 
+                                        author={profile} 
+                                        onDelete={isMyProfile ? () => confirmDelete(photo.id) : undefined} 
+                                    />
                                 ))}
                             </div>
                         ) : (
@@ -212,7 +232,7 @@ const ProfilePage = () => {
                     </div>
                 )}
 
-                {/* ESTATÍSTICAS */}
+                {/* TABS STATS E TEAMS */}
                 {activeTab === 'stats' && (
                     <div>
                         <div className="d-flex justify-content-between align-items-center mb-3 px-1">
@@ -222,14 +242,10 @@ const ProfilePage = () => {
                                     Posição: <span className="text-danger">{currentPosition}</span>
                                 </small>
                             </div>
-                            
-                            {/* Dropdown de Modalidade */}
                             <div style={{ width: '130px' }}>
                                 <Input type="select" bsSize="sm" className="rounded-pill shadow-sm border-0 fw-bold bg-white text-dark" value={selectedModality} onChange={(e) => setSelectedModality(e.target.value)}>
                                     {availableModalities.length === 0 && <option value="Geral">Geral</option>}
-                                    {availableModalities.map(mod => (
-                                        <option key={mod} value={mod}>{mod}</option>
-                                    ))}
+                                    {availableModalities.map(mod => <option key={mod} value={mod}>{mod}</option>)}
                                 </Input>
                             </div>
                         </div>
@@ -281,26 +297,17 @@ const ProfilePage = () => {
                                 <>
                                     <Col xs={4}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-white h-100">
-                                            <CardBody className="p-2 text-center">
-                                                <div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>PONTOS</div>
-                                                <h5 className="fw-bold text-dark m-0">{currentStats.points || 0}</h5>
-                                            </CardBody>
+                                            <CardBody className="p-2 text-center"><div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>PONTOS</div><h5 className="fw-bold text-dark m-0">{currentStats.points || 0}</h5></CardBody>
                                         </Card>
                                     </Col>
                                     <Col xs={4}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-white h-100">
-                                            <CardBody className="p-2 text-center">
-                                                <div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>TRIPLOS</div>
-                                                <h5 className="fw-bold text-dark m-0">{currentStats.triples || 0}</h5>
-                                            </CardBody>
+                                            <CardBody className="p-2 text-center"><div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>TRIPLOS</div><h5 className="fw-bold text-dark m-0">{currentStats.triples || 0}</h5></CardBody>
                                         </Card>
                                     </Col>
                                     <Col xs={4}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-white h-100">
-                                            <CardBody className="p-2 text-center">
-                                                <div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>BLOCKS</div>
-                                                <h5 className="fw-bold text-dark m-0">{currentStats.blocks || 0}</h5>
-                                            </CardBody>
+                                            <CardBody className="p-2 text-center"><div className="text-muted small fw-bold mb-1" style={{ fontSize: '10px' }}>BLOCKS</div><h5 className="fw-bold text-dark m-0">{currentStats.blocks || 0}</h5></CardBody>
                                         </Card>
                                     </Col>
                                 </>
@@ -308,18 +315,12 @@ const ProfilePage = () => {
                                 <>
                                     <Col xs={6}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-white h-100">
-                                            <CardBody className="p-3 d-flex justify-content-between align-items-center">
-                                                <span className="text-muted fw-bold small">Golos</span>
-                                                <span className="fw-bold fs-5 text-dark">{currentStats.goals || 0}</span>
-                                            </CardBody>
+                                            <CardBody className="p-3 d-flex justify-content-between align-items-center"><span className="text-muted fw-bold small">Golos</span><span className="fw-bold fs-5 text-dark">{currentStats.goals || 0}</span></CardBody>
                                         </Card>
                                     </Col>
                                     <Col xs={6}>
                                         <Card className="shadow-sm border-0 rounded-4 bg-white h-100">
-                                            <CardBody className="p-3 d-flex justify-content-between align-items-center">
-                                                <span className="text-muted fw-bold small">Assistências</span>
-                                                <span className="fw-bold fs-5 text-dark">{currentStats.assists || 0}</span>
-                                            </CardBody>
+                                            <CardBody className="p-3 d-flex justify-content-between align-items-center"><span className="text-muted fw-bold small">Assistências</span><span className="fw-bold fs-5 text-dark">{currentStats.assists || 0}</span></CardBody>
                                         </Card>
                                     </Col>
                                 </>
@@ -328,19 +329,15 @@ const ProfilePage = () => {
                     </div>
                 )}
 
-                {/* EQUIPAS */}
                 {activeTab === 'teams' && (
                     <div>
                         <h6 className="fw-bold mb-3 px-1 text-dark">Equipas Atuais ({userTeams.length})</h6>
                         {userTeams.length > 0 ? (
                             <Row className="gx-3 gy-3">
                                 {userTeams.map(team => {
-                                    
                                     let roles = [];
                                     if (team.coach == profileId) roles.push("Treinador");
                                     if (team.captain == profileId) roles.push("Capitão");
-                                    
-                                    // Se não for nem treinador nem capitão, é apenas jogador
                                     if (roles.length === 0) roles.push("Jogador");
                                     
                                     const roleText = roles.join(" & ");
@@ -348,14 +345,16 @@ const ProfilePage = () => {
 
                                     return (
                                         <Col xs={6} key={team.id}>
-                                            <div className="border border-secondary border-opacity-25 rounded-4 p-3 bg-white shadow-sm text-center h-100 pb-4 position-relative">
+                                            <div 
+                                                className="border border-secondary border-opacity-25 rounded-4 p-3 bg-white shadow-sm text-center h-100 pb-4 position-relative cursor-pointer"
+                                                onClick={() => navigate(`/equipa/${team.id}`)}
+                                            >
                                                 <div className="rounded-circle overflow-hidden bg-light mx-auto mb-2 border" style={{ width: '50px', height: '50px' }}>
                                                     {getPic(team) ? <img src={getPic(team)} alt={team.name} className="w-100 h-100 object-fit-cover"/> : <span className="d-flex align-items-center justify-content-center h-100 fw-bold text-muted small">EQ</span>}
                                                 </div>
                                                 <h6 className="fw-bold mb-0 text-truncate" style={{ fontSize: '13px' }}>{team.name}</h6>
                                                 <small className="text-muted d-block mb-3" style={{ fontSize: '11px' }}>{team.modality}</small>
                                                 
-                                                {/* Mini tag de Cargo alinhada ao fundo do cartão */}
                                                 <div className="position-absolute bottom-0 start-50 translate-middle-x w-100 mb-2">
                                                     <Badge color={badgeColor} className="rounded-pill shadow-sm text-truncate px-2" style={{ fontSize: '10px', letterSpacing: '0.5px', maxWidth: '90%' }}>
                                                         {roleText}
@@ -373,9 +372,7 @@ const ProfilePage = () => {
                         )}
                     </div>
                 )}
-
             </Container>
-
             <BottomNavBar />
         </div>
     );
