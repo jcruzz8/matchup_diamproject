@@ -7,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from .models import FollowRequest, Player, Team, Game, Registration, Message, Highlight, TeamJoinRequest, Notification
+from .models import FollowRequest, Player, Team, Game, Registration, Message, Highlight, TeamJoinRequest, Notification, \
+    PlayerModalityProfile
 from .serializers import HighlightSerializer, MessageSerializer, PlayerSerializer, TeamSerializer, GameSerializer, RegistrationSerializer, NotificationSerializer
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -63,12 +64,19 @@ def players(request):
                 height=height,
                 zone=zone,
                 is_public=request.data.get('is_public', True),
-                sport_positions=sport_positions
             )
 
             if 'photo' in request.FILES:
                 new_player.photo = request.FILES['photo']
                 new_player.save()
+
+            for modality, position in sport_positions.items():
+                if position:
+                    PlayerModalityProfile.objects.create(
+                        player=new_player,
+                        modality=modality,
+                        preferred_positions=position
+                    )
 
             return Response(status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -112,6 +120,18 @@ def player_detail(request, pk):
             data['birth_date'] = None
         if 'height' in data and data['height'] == '':
             data['height'] = None
+
+        if 'sport_positions' in data:
+            try:
+                positions = json.loads(data['sport_positions']) if isinstance(data['sport_positions'], str) else data[
+                    'sport_positions']
+                for mod, pos in positions.items():
+                    if pos:
+                        profile, _ = PlayerModalityProfile.objects.get_or_create(player=player, modality=mod)
+                        profile.preferred_positions = pos
+                        profile.save()
+            except Exception as e:
+                pass
 
         serializer = PlayerSerializer(player, data=data, partial=(request.method == 'PATCH'))
         if serializer.is_valid():
