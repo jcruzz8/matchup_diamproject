@@ -40,4 +40,4 @@ Thumbs.db
 # =========================
 # 6. BASE DE DADOS LOCAL (Opcional)
 # =========================
-# db.sqlite3
+db.sqlite3

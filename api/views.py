@@ -551,6 +551,7 @@ def messages_view(request):
     
 # Endpoint de Detalhe para UMA Mensagem Específica (Apagar)
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def highlights_view(request):
     if request.method == 'GET':
         # Devolve todos os highlights ordenados do mais recente para o mais antigo
@@ -567,6 +568,7 @@ def highlights_view(request):
     
 # Endpoint de Detalhe para UM Highlight Específico (Apagar)
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def highlight_detail(request, pk):
     highlight = get_object_or_404(Highlight, pk=pk)
     
@@ -579,6 +581,7 @@ def highlight_detail(request, pk):
 
 # Endpoint para dar Like/Dislike a um Highlight
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def toggle_like(request, pk):
     # Vai buscar a foto pelo ID
     highlight = get_object_or_404(Highlight, pk=pk)

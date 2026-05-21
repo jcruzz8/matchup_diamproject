@@ -4,21 +4,6 @@ import axios from 'axios';
 import { Card, CardBody, Badge, Button } from 'reactstrap';
 import { useUserContext } from '../context/UserProvider';
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
 const HighlightCard = ({ highlight, author, onDelete }) => {
     const navigate = useNavigate();
     const { user } = useUserContext();
@@ -59,10 +44,9 @@ const HighlightCard = ({ highlight, author, onDelete }) => {
 
         try {
             // Avisar a Base de Dados (Django)
-            const csrftoken = getCookie('csrftoken');
             await axios.post(`http://localhost:8000/api/highlights/${highlight.id}/like/`, {}, {
                 withCredentials: true,
-                headers: { 'X-CSRFToken': csrftoken }
+                headers: { 'X-CSRFToken': getCSRFToken() }
             });
         } catch (error) {
             console.error("Erro ao dar like:", error);
@@ -71,6 +55,12 @@ const HighlightCard = ({ highlight, author, onDelete }) => {
             setLikes(wasLiked ? [...likes, userId] : likes.filter(id => id !== userId));
         }
     };
+
+    const getCSRFToken = () => {
+    return document.cookie.split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    }
 
     return (
         <Card className="border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">

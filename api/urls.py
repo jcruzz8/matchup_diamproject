@@ -16,6 +16,7 @@ urlpatterns = [
     
     # Rotas de Jogadores
     path('players/', views.players),
+    path('my-following/', views.my_following),
     path('players/<int:pk>/relationship-status/', views.relationship_status),
     path('players/<int:pk>/follow/', views.toggle_follow),
     path('players/<int:pk>/', views.player_detail),

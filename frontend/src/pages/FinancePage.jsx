@@ -4,22 +4,6 @@ import { Container, Button, Card, CardBody, Badge, Modal, ModalHeader, ModalBody
 import TopNavBarSimple from '../components/TopNavBarSimple.jsx';
 import BottomNavBar from '../components/BottomNavBar.jsx';
 
-// Função para ir buscar o token CSRF
-const getCookie = (name) => {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-};
-
 const FinancePage = () => {
     const [activeTab, setActiveTab] = useState('pending');
     const [registrations, setRegistrations] = useState([]);
@@ -90,9 +74,8 @@ const FinancePage = () => {
         if (!selectedReg) return;
         setIsPaying(true);
         try {
-            const csrftoken = getCookie('csrftoken');
             await axios.post(`http://localhost:8000/api/registrations/${selectedReg.id}/pay/`, {}, {
-                headers: { 'X-CSRFToken': csrftoken },
+                headers: { 'X-CSRFToken': getCSRFToken() },
                 withCredentials: true
             });
 
@@ -110,6 +93,12 @@ const FinancePage = () => {
             setIsPaying(false);
         }
     };
+
+    const getCSRFToken = () => {
+    return document.cookie.split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    }
 
     const renderExpenseCard = (reg, isPaid) => {
         const isOverdue = !isPaid && new Date(reg.payment_deadline) < today;
