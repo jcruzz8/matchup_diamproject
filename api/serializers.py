@@ -11,6 +11,9 @@ class PlayerSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
 
+    sport_positions = serializers.SerializerMethodField()
+    modality_stats = serializers.SerializerMethodField()
+
     class Meta:
         model = Player
         fields = '__all__' # all diz ao django para incluir todos os campos 
@@ -20,6 +23,25 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     def get_following_count(self, obj):
         return obj.following.count()
+
+    def get_sport_positions(self, obj):
+        return {profile.modality: profile.preferred_positions for profile in obj.modality_profiles.all() if profile.preferred_positions}
+
+    def get_modality_stats(self, obj):
+        stats = {}
+        for profile in obj.modality_profiles.all():
+            stats[profile.modality] = {
+                'matches_played': profile.matches_played,
+                'wins': profile.wins,
+                'losses': profile.losses,
+                'draws': profile.draws,
+                'goals': profile.goals,
+                'assists': profile.assists,
+                'points': profile.points,
+                'triples': profile.triples,
+                'blocks': profile.blocks,
+            }
+        return stats
 
 class FollowRequestSerializer(serializers.ModelSerializer):
     class Meta:

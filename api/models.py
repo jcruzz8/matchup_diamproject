@@ -20,19 +20,11 @@ class Player(models.Model):
     zone = models.CharField(max_length=100, null=True, blank=True)
     
     # Guardar as Modalidades e Posições (Estrutura JSON)
-    sport_positions = models.JSONField(default=dict, blank=True)
-    modality_stats = models.JSONField(default=dict, blank=True)
+    # sport_positions = models.JSONField(default=dict, blank=True)
+    #modality_stats = models.JSONField(default=dict, blank=True)
     is_public = models.BooleanField(default=True) # Perfil público ou privado
     
     followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
-
-    # Estatísticas
-    matches_played = models.IntegerField(default=0)
-    wins = models.IntegerField(default=0)
-    losses = models.IntegerField(default=0)
-    draws = models.IntegerField(default=0)
-    goals = models.IntegerField(default=0)
-    assists = models.IntegerField(default=0)
 
     def __str__(self):
         return self.user.username
@@ -41,6 +33,32 @@ class Player(models.Model):
     @property
     def colegas(self):
         return self.followers.filter(id__in=self.following.all())
+
+class PlayerModalityProfile(models.Model):
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='modality_profiles')
+    modality = models.CharField(max_length=50)
+    preferred_positions = models.CharField(max_length=200, blank=True)
+
+    # Estatísticas
+    matches_played = models.IntegerField(default=0)
+    wins = models.IntegerField(default=0)
+    losses = models.IntegerField(default=0)
+    draws = models.IntegerField(default=0)
+
+    # Futebol
+    goals = models.IntegerField(default=0)
+    assists = models.IntegerField(default=0)
+
+    # Basket
+    points = models.IntegerField(default=0)
+    triples = models.IntegerField(default=0)
+    blocks = models.IntegerField(default=0)
+
+    class Meta:
+        unique_together = ('player', 'modality')
+
+    def __str__(self):
+        return f"Estatísticas de {self.player.user.username} ({self.modality})"
     
 class FollowRequest(models.Model):
     STATUS_CHOICES = [
@@ -134,8 +152,6 @@ class Game(models.Model):
     cor_equipa2 = models.CharField(max_length=7, default='#0000ff') 
     
     distribution_model = models.CharField(max_length=50, default='Escolha Livre')
-
-    occupiedPositions = models.JSONField(default=list, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
 
