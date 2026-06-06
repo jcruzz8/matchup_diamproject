@@ -1,8 +1,16 @@
 import { Container, Row, Col, Button } from 'reactstrap';
 import logo from '../assets/logo.png';
-import { Link } from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
+import {useUserContext} from "../context/UserProvider.jsx";
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+  const { setUser } = useUserContext();
+
+  const handleGuest = async () => {
+    setUser(null);
+    navigate('/');
+  }
   return (
     <div className="landing-bg min-vh-100 d-flex flex-column justify-content-center align-items-center">
       <Container>
@@ -33,6 +41,10 @@ const LandingPage = () => {
                 Iniciar Sessão
               </Button>
             </div>
+
+            <Button color="grey" outline className="text-secondary text-decoration-none fw-bold mt-2" onClick={handleGuest}>
+                    Continuar como Convidado
+              </Button>
 
           </Col>
         </Row>

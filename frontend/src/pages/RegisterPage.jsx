@@ -115,7 +115,7 @@ const RegisterPage = () => {
 
             // Espera 3 segundos e redireciona para a página inicial
             setTimeout(() => {
-                navigate('/');
+                navigate('/login');
             }, 3000);
 
         } catch (error) {

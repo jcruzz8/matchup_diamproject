@@ -1,21 +1,19 @@
-# 🏆 MatchUp - Projeto DIAM
+# MatchUp - Projeto DIAM
 
-Projeto Full-Stack com Backend em **Django (Python)** e Frontend em **React (Vite)**.
+## Membros do grupo:
+- Diogo Gregório 130485
 
-## 🚀 Como instalar e correr o projeto
+- HenriqueAfonso 123279
+
+- José Cruz 123292
+
+- Samuel Monteiro 123300
+
+## Como instalar e correr o projeto
 
 Para correres este projeto no teu computador, precisas de ter o **Python** e o **Node.js** instalados.
 
-### 1. Clonar o Repositório
-Abre o terminal e corre:
-```bash
-git clone https://github.com/jcruzz8/matchup_diamproject.git
-cd MatchUp
-```
-
----
-
-### 2. Configurar o Backend (Django)
+### 1. Configurar o Backend (Django)
 
 Abre um terminal na pasta principal do projeto e segue estes passos:
 
@@ -38,7 +36,7 @@ Abre um terminal na pasta principal do projeto e segue estes passos:
 
 ---
 
-### 3. Configurar o Frontend (React)
+### 2. Configurar o Frontend (React)
 
 Abre um **novo/segundo terminal**, entra na pasta do frontend e segue estes passos:
 
@@ -55,3 +53,23 @@ Abre um **novo/segundo terminal**, entra na pasta do frontend e segue estes pass
    npm run dev
    ```
    *(O frontend vai abrir em http://localhost:5173)*
+
+---
+
+## Credenciais de users que já constam na base de dados (para teste)
+
+1. - **Username:** teste
+   - **Password:** TestePeladinhas
+
+
+2. - **Username:** privado
+   - **Password:** PrivadoPeladinhas
+
+
+3. - **Username:** samu
+   - **Password:** SamuPeladinhas
+
+
+4. **SUPERUSER (APENAS BACKEND)**
+   - **Username:** admin
+   - **Password:** admin
