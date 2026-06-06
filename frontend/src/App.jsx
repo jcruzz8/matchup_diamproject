@@ -26,16 +26,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={user?<HomePage/>:<LandingPage/>}/>
+        <Route path="/" element={<HomePage/>}/>
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/organizar" element={<OrganizerDashboard />} />
-        <Route path="/criar" element={<CreateMenuPage />} />
-        <Route path="/criar/jogo" element={<CreateGamePage />} />
-        <Route path="/criar/equipa" element={<CreateTeamPage />} />
-        <Route path="/criar/publicacao" element={<CreatePostPage />} />
-        <Route path="/estado-match" element={<MatchStatusPage />} />
+        <Route path="/organizar" element={user?<OrganizerDashboard />:<LandingPage/>} />
+        <Route path="/criar" element={user?<CreateMenuPage />:<LandingPage/>} />
+        <Route path="/criar/jogo" element={user?<CreateGamePage />:<LandingPage/>} />
+        <Route path="/criar/equipa" element={user?<CreateTeamPage />:<LandingPage/>} />
+        <Route path="/criar/publicacao" element={user?<CreatePostPage />:<LandingPage/>} />
+        <Route path="/estado-match" element={user?<MatchStatusPage />:<LandingPage/>} />
         <Route path="/comunidade" element={<CommunityPage />} />
         <Route path="/pesquisar" element={<SearchPage />} />
         <Route path="/perfil" element={user?<ProfilePage/>:<LandingPage/>} />

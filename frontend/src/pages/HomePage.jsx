@@ -18,32 +18,52 @@ const HomePage = () => {
     const [activeTab, setActiveTab] = useState('match');
     const [loading, setLoading] = useState(true);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            // Vamos buscar os jogos, todos os highlights e todos os jogadores
-            const [gamesRes, highlightsRes, playersRes, myProfileRes] = await Promise.all([
+const fetchData = async () => {
+    setLoading(true);
+    try {
+        // Criamos variáveis para armazenar as respostas
+        let gamesRes, playersRes;
+        let highlightsRes = { data: [] }; // Começa vazio por defeito para o convidado
+        let myProfileRes = null;
+
+        if (userId) {
+            // UTILIZADOR AUTENTICADO
+            const [gRes, hRes, pRes, mRes] = await Promise.all([
                 axios.get('http://localhost:8000/api/games/'),
                 axios.get('http://localhost:8000/api/highlights/'),
                 axios.get('http://localhost:8000/api/players/'),
-                userId ? axios.get(`http://localhost:8000/api/players/${userId}/`) : null
+                axios.get(`http://localhost:8000/api/players/${userId}/`)
             ]);
+            gamesRes = gRes;
+            highlightsRes = hRes;
+            playersRes = pRes;
+            myProfileRes = mRes;
+        } else {
+            // CONVIDADO
+            const [gRes, pRes] = await Promise.all([
+                axios.get('http://localhost:8000/api/games/'),
+                axios.get('http://localhost:8000/api/players/')
+            ]);
+            gamesRes = gRes;
+            playersRes = pRes;
+        }
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const activeGames = gamesRes.data.filter(game => {
-                const deadline = new Date(game.registration_deadline);
-                deadline.setHours(0, 0, 0, 0);
-                return deadline >= today;
-            });
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const activeGames = gamesRes.data.filter(game => {
+            const deadline = new Date(game.registration_deadline);
+            deadline.setHours(0, 0, 0, 0);
+            return deadline >= today;
+        });
+        setGames(activeGames.reverse());
 
-            setGames(activeGames.reverse());
+        const allPlayers = playersRes.data;
 
-            const allPlayers = playersRes.data;
+        if (userId) {
             const myFollowingList = myProfileRes?.data?.following || myProfileRes?.data?.colegas || [];
 
-            // Filtramos highlights: os meus ou de quem sigo
-            const feedHighlights = highlightsRes.data.filter(h => 
+            // Filtramos highlights: apenas os meus ou de quem sigo
+            const feedHighlights = highlightsRes.data.filter(h =>
                 myFollowingList.includes(h.player) || h.player === userId
             );
 
@@ -54,13 +74,17 @@ const HomePage = () => {
             });
 
             setHighlights(fullFeed.reverse());
-
-        } catch (error) {
-            console.error("Erro ao carregar dados da Home:", error);
-        } finally {
-            setLoading(false);
+        } else {
+            // Se for convidado, o feed de highlights fica limpo e vazio
+            setHighlights([]);
         }
-    };
+
+    } catch (error) {
+        console.error("Erro ao carregar dados da Home:", error);
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
         fetchData();

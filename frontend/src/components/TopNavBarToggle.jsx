@@ -7,6 +7,7 @@ import { useUserContext } from '../context/UserProvider.jsx';
 
 const TopNavBarToggle = ({ activeTab, setActiveTab }) => {
     const navigate = useNavigate();
+    const {user} = useUserContext();
     const { notifications, toggleNotifications, notificationAlert, hideAlert } = useUserContext();
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -30,18 +31,20 @@ const TopNavBarToggle = ({ activeTab, setActiveTab }) => {
                 </Button>
 
                 {/* Ícone de Notificações (Coração) */}
-                <div className="position-relative cursor-pointer text-dark" onClick={toggleNotifications} style={{ width: '24px', height: '24px' }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-                        <path fillRule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314" />
-                    </svg>
-                    {unreadCount > 0 ? (
-                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style={{ minWidth: '16px', height: '16px', fontSize: '10px' }}>
-                            {unreadCount}
-                        </span>
-                    ) : (
-                        <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ width: '9px', height: '9px' }}></span>
-                    )}
-                </div>
+                {user? (
+                    <div className="position-relative cursor-pointer text-dark" onClick={toggleNotifications} style={{ width: '24px', height: '24px' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                            <path fillRule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314" />
+                        </svg>
+                        {unreadCount > 0 ? (
+                            <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger text-white" style={{ minWidth: '16px', height: '16px', fontSize: '10px' }}>
+                                {unreadCount}
+                            </span>
+                        ) : (
+                            <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ width: '9px', height: '9px' }}></span>
+                        )}
+                    </div>
+                ):(<div/>)}
             </div>
 
             {/* CENTRO: Switch */}
@@ -61,9 +64,15 @@ const TopNavBarToggle = ({ activeTab, setActiveTab }) => {
             </div>
 
             {/* LADO DIREITO: Perfil */}
-            <div className="d-flex justify-content-end" style={{ width: '100px' }}>
-                <ProfileDropdown />
-            </div>
+            {user? (<div className="d-flex justify-content-end" style={{ width: '100px' }}>
+                        <ProfileDropdown />
+                    </div>):(
+                    <div className="d-flex align-items-center">
+                         <Button color="danger" className="fw-bold px-4" onClick={() => navigate('/login')}>
+                            Iniciar Sessão
+                        </Button>
+                    </div>
+            )}
             
         </div>
 
